@@ -5,7 +5,9 @@ public class GA {
 	public static MyRand myRand = new MyRand();
 
 	public GA (SelectionModel n_sModel, FitnessFunction f, int n_ell, int n_nInitial, int n_selectionPressure, double n_pc,
-		double n_pm, int n_maxGen, int n_maxFe, int k, Test.LTVertex[] arrVertices)
+		double n_pm, int n_maxGen, int n_maxFe, int k, Test.LTVertex[] arrVertices,
+		HashSet<Test.LTVertex> player1NewlyActiveVertices, HashSet<Test.LTVertex> player2NewlyActiveVertices, 
+		HashSet<Test.LTVertex> player1ActiveVertices, HashSet<Test.LTVertex> player2ActiveVertices)
 	{
 		this.k = k;
 		this.arrVertices = arrVertices;

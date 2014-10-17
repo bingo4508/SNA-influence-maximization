@@ -1,7 +1,9 @@
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -14,6 +16,7 @@ import java.util.Stack;
 import edu.uci.ics.jung.graph.DirectedSparseMultigraph;
 import edu.uci.ics.jung.graph.Graph;
 import edu.uci.ics.jung.graph.UndirectedSparseMultigraph;
+import edu.uci.ics.jung.graph.util.Pair;
 
 
 public class Test {
@@ -40,7 +43,12 @@ public class Test {
 	
 	private static class SortedVertexList extends ArrayList<VertexWithData>
 	{
-	    public boolean add(VertexWithData mt)
+	    /**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+
+		public boolean add(VertexWithData mt)
 	    {
 	        int index = Collections.binarySearch(this, mt, new Comparator<VertexWithData>(){
 	        	public int compare(VertexWithData o1, VertexWithData o2)
@@ -69,13 +77,13 @@ public class Test {
 			for (Integer ind:c.gene)
 				seeds.add(c.arrVertices[ind]);
 			HashSet<LTVertex> activeVertices = new HashSet<LTVertex>(g.getVertexCount());
-			HashSet<LTVertex> newerActiveVertices = null;
-			resetState(vertices);
-			resetHold(vertices);
-			newerActiveVertices = runDiffusion(g, vertices, seeds, 0, activeVertices, Model.LTModel);
+			Pair<HashSet<LTVertex>> newerActiveVertices = null;
+			resetState(vertices, new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>());
+			resetHold(g, vertices);
+			newerActiveVertices = runDiffusion(g, vertices, seeds, new HashSet<LTVertex>(), 0, activeVertices, new HashSet<LTVertex>(), Model.LTModel);
 			HashSet<Vertex> activatedVertices = new HashSet<Vertex>(activeVertices.size());
 			activatedVertices.addAll(activeVertices);
-			activatedVertices.addAll(newerActiveVertices);
+			activatedVertices.addAll(newerActiveVertices.getFirst());
 			return activatedVertices.size();
 		}
 		@Override
@@ -91,7 +99,7 @@ public class Test {
 	
 	public static class Vertex
 	{
-		public static enum State{INACTIVE, NEWLY_ACTIVE, ACTIVE}; 
+		public static enum State{INACTIVE, PLAYER1_NEWLY_ACTIVE, PLAYER2_NEWLY_ACTIVE, PLAYER1_ACTIVE, PLAYER2_ACTIVE}; 
 		public int vertexIndex;
 		public State state;
 		public Vertex(int vertexIndex, State state)
@@ -113,12 +121,14 @@ public class Test {
 	public static class LTVertex extends Vertex
 	{
 		public double ltThreshold;
-		public double ltHold;
+		public double ltHold1;
+		public double ltHold2;
 		public LTVertex(int vertexIndex, double ltThreshold, State state)
 		{
 			super(vertexIndex, state);
 			this.ltThreshold = ltThreshold;
-			this.ltHold = 0;
+			this.ltHold1 = 0;
+			this.ltHold2 = 0;
 		}
 	}
 	
@@ -128,25 +138,233 @@ public class Test {
 	{
 		public String edgesFileName;
 		public String nodesFileName;
-		//public String seedsFileName;
+		public String statusFileName;
 		public Model model;
-		public InputFileCollect(String edgesFileName, String nodesFileName, Model model)
+		public InputFileCollect(String edgesFileName, String nodesFileName, String statusFileName)
 		{
 			this.edgesFileName = edgesFileName;
 			this.nodesFileName = nodesFileName;
-			//this.seedsFileName = seedsFileName;
-			this.model = model;
+			this.statusFileName = statusFileName;
+			this.model = Model.LTModel;
 		}
 	}
 	
-	private static InputFileCollect[] inputFiles = new InputFileCollect[]{
-		new InputFileCollect("partB_hepth_lt_edges.txt", "partB_hepth_lt_nodes.txt", Model.LTModel),
-		new InputFileCollect("partB_egofb_lt_edges.txt", "partB_egofb_lt_nodes.txt", Model.LTModel),
-	};
-	
-	
 	public static void main(String[] args)
 	{
+		testStratergyForOneParty();
+		//testStratergyForMultiParty(args);
+		
+	}
+	
+	private static void testStratergyForMultiParty(String []args)
+	{
+		int playerID = Integer.parseInt(args[0]);
+		InputFileCollect inputFile = new InputFileCollect(args[2], args[1], args[3]);
+		int k = Integer.parseInt(args[4]);
+		String outputFileName = args[5];
+		
+		Graph<LTVertex, LTEdge> g;
+		HashMap<Integer, LTVertex> vertices;
+		HashSet<LTVertex> seeds = null;
+		
+		vertices = new HashMap<Integer, LTVertex>();
+		g = createGraph(inputFile, vertices);
+		
+		if (playerID == 1)
+		{
+			seeds = stratergyForPlayer1(g, vertices, k, inputFile);
+		}
+		else if (playerID == 2)
+		{
+			seeds = stratergyForPlayer2(g, vertices, k, inputFile);
+		}
+		
+		
+		PrintStream output = null;
+		try {
+			output = new PrintStream(new File(outputFileName));
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		for (LTVertex s:seeds)
+		{
+			output.print(""+s.vertexIndex+" ");
+		}
+		output.close();
+		return;
+	}
+	
+	private static HashSet<LTVertex> stratergyForPlayer1(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, int k, InputFileCollect inputFile)
+	{
+		BufferedReader input = null;
+		String line[] = new String[4];
+		String nodes[];
+		HashSet<LTVertex> player1ActiveVertices = new HashSet<LTVertex>();
+		HashSet<LTVertex> player2ActiveVertices = new HashSet<LTVertex>();
+		HashSet<LTVertex> player1NewlyActiveVertices = new HashSet<LTVertex>();
+		HashSet<LTVertex> player2NewlyActiveVertices = new HashSet<LTVertex>();
+		try 
+		{
+			input = new BufferedReader(new FileReader(inputFile.statusFileName));
+			line[0] = input.readLine();
+			line[1] = input.readLine();
+			line[2] = input.readLine();
+			line[3] = input.readLine();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		while(line[0] != null)
+		{
+			nodes = line[0].split(" ");		//seeds in previous round, so it's Active.
+			for (String node:nodes)
+			{
+				LTVertex v = vertices.get(node);
+				if (!player1NewlyActiveVertices.contains(v) 
+						&& !player2NewlyActiveVertices.contains(v) 
+						&& !player2ActiveVertices.contains(v))
+					player1ActiveVertices.add(v);
+			}
+			player1ActiveVertices.addAll(player1NewlyActiveVertices);
+			player1NewlyActiveVertices.clear();
+			nodes = line[1].split(" ");
+			for (String node:nodes)			//seeds in previous round, so it's Avtive.
+			{
+				LTVertex v = vertices.get(node);
+				if (!player1NewlyActiveVertices.contains(v) 
+						&& !player2NewlyActiveVertices.contains(v) 
+						&& !player1ActiveVertices.contains(v))
+					player2ActiveVertices.add(v);
+			}
+			player2ActiveVertices.addAll(player2NewlyActiveVertices);
+			player2NewlyActiveVertices.clear();
+			nodes = line[2].split(" ");		//newly activated nodes
+			for (String node:nodes)
+			{
+				LTVertex v = vertices.get(node);
+				player1NewlyActiveVertices.add(v);
+			}
+			nodes = line[3].split(" ");		//newly activated nodes
+			for (String node:nodes)
+			{
+				LTVertex v = vertices.get(node);
+				player2NewlyActiveVertices.add(v);
+			}
+
+			try {
+				line[0] = input.readLine();
+				line[1] = input.readLine();
+				line[2] = input.readLine();
+				line[3] = input.readLine();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		try {
+			input.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		int N1 = 5000, s1 = 2, maxG = 6;
+		double pc1 = 0.5, pm1 = 0.01;
+		
+		return GA(g, vertices, player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices, k, N1, s1, pc1, pm1, maxG);
+	}
+	
+	private static HashSet<LTVertex> stratergyForPlayer2(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, int k, InputFileCollect inputFile)
+	{
+		BufferedReader input = null;
+		String line[] = new String[4];
+		String nodes[];
+		HashSet<LTVertex> player1ActiveVertices = new HashSet<LTVertex>();
+		HashSet<LTVertex> player2ActiveVertices = new HashSet<LTVertex>();
+		HashSet<LTVertex> player1NewlyActiveVertices = new HashSet<LTVertex>();
+		HashSet<LTVertex> player2NewlyActiveVertices = new HashSet<LTVertex>();
+		try 
+		{
+			input = new BufferedReader(new FileReader(inputFile.statusFileName));
+			line[0] = input.readLine();
+			line[1] = input.readLine();
+			line[2] = input.readLine();
+			line[3] = input.readLine();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		while(line[1] != null)
+		{
+			nodes = line[0].split(" ");		//seeds in previous round, so it's Active.
+			for (String node:nodes)
+			{
+				LTVertex v = vertices.get(node);
+				if (!player1NewlyActiveVertices.contains(v) 
+						&& !player2NewlyActiveVertices.contains(v) 
+						&& !player2ActiveVertices.contains(v))
+					player1ActiveVertices.add(v);
+			}
+			player1ActiveVertices.addAll(player1NewlyActiveVertices);
+			player1NewlyActiveVertices.clear();
+			nodes = line[1].split(" ");
+			for (String node:nodes)			//seeds in previous round, so it's Avtive.
+			{
+				LTVertex v = vertices.get(node);
+				if (!player1NewlyActiveVertices.contains(v) 
+						&& !player2NewlyActiveVertices.contains(v) 
+						&& !player1ActiveVertices.contains(v))
+					player2ActiveVertices.add(v);
+			}
+			player2ActiveVertices.addAll(player2NewlyActiveVertices);
+			player2NewlyActiveVertices.clear();
+			nodes = line[2].split(" ");		//newly activated nodes
+			for (String node:nodes)
+			{
+				LTVertex v = vertices.get(node);
+				player1NewlyActiveVertices.add(v);
+			}
+			nodes = line[3].split(" ");		//newly activated nodes
+			for (String node:nodes)
+			{
+				LTVertex v = vertices.get(node);
+				player2NewlyActiveVertices.add(v);
+			}
+
+			try {
+				line[0] = input.readLine();
+				line[1] = input.readLine();
+				line[2] = input.readLine();
+				line[3] = input.readLine();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		nodes = line[0].split(" ");			//seeds player1 chose in this round
+		for (String node:nodes)
+			player1NewlyActiveVertices.add(vertices.get(node));
+		try {
+			input.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		int N1 = 5000, s1 = 2, maxG = 6;
+		double pc1 = 0.5, pm1 = 0.01;
+		
+		return GA(g, vertices, player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices, k, N1, s1, pc1, pm1, maxG);
+	}
+	
+	private static void testStratergyForOneParty()
+	{
+		InputFileCollect[] inputFiles = new InputFileCollect[]{
+				new InputFileCollect("partB_hepth_lt_edges.txt", "partB_hepth_lt_nodes.txt", ""),
+				new InputFileCollect("partB_egofb_lt_edges.txt", "partB_egofb_lt_nodes.txt", ""),
+		};
+		
 		Graph<LTVertex, LTEdge> g;
 		HashMap<Integer, LTVertex> vertices;
 		HashSet<LTVertex> seeds;
@@ -168,24 +386,24 @@ public class Test {
 				for(int s1:s)
 					for (double pc1:pc)
 						for (double pm1:pm)*/
-			int N1 = 5000, s1 = 2, maxG = 6;
+			int N1 = 900, s1 = 2, maxG = 25;
 			double pc1 = 0.5, pm1 = 0.01;
 			{
 					//maxG = 30000/N1;
-							seeds = GA(g, vertices, k, N1, s1, pc1, pm1, maxG);
+							seeds = GA(g, vertices, new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), k, N1, s1, pc1, pm1, maxG);
 			//seeds = SIMPATH(g, vertices, ita, ell, k);
 
 				HashSet<LTVertex> activeVertices = new HashSet<LTVertex>(g.getVertexCount());
-				HashSet<LTVertex> newerActiveVertices = null;
-				resetState(vertices);
-				resetHold(vertices);
-				newerActiveVertices = runDiffusion(g, vertices, seeds, 0, activeVertices, inputFiles[f].model);
+				Pair<HashSet<LTVertex>> newerActiveVertices = null;
+				resetState(vertices, new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>());
+				resetHold(g, vertices);
+				newerActiveVertices = runDiffusion(g, vertices, seeds, new HashSet<LTVertex>(), 0, activeVertices, new HashSet<LTVertex>(), inputFiles[f].model);
 				
 				//System.out.println("Running LT model ...");
 				
 				HashSet<Vertex> activatedVertices = new HashSet<Vertex>(activeVertices.size());
 				activatedVertices.addAll(activeVertices);
-				activatedVertices.addAll(newerActiveVertices);
+				activatedVertices.addAll(newerActiveVertices.getFirst());
 				
 				//System.out.println("Spread: "+activatedVertices.size());
 				System.out.println(""+N1+" "+s1+" "+pc1+" "+pm1+" "+(30000/N1)+" "+activatedVertices.size()+" "+(System.currentTimeMillis()-now));
@@ -194,15 +412,18 @@ public class Test {
 			}
 			
 		}
-		
 	}
 	
-	private static HashSet<LTVertex> GA(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, int k, int N, int s, double pc, double pm, int maxG)
+	private static HashSet<LTVertex> GA(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, 
+			HashSet<LTVertex> player1NewlyActiveVertices, HashSet<LTVertex> player2NewlyActiveVertices, 
+			HashSet<LTVertex> player1ActiveVertices, HashSet<LTVertex> player2ActiveVertices,
+			int k, int N, int s, double pc, double pm, int maxG)
 	{
 		HashSet<LTVertex> S = new HashSet<LTVertex>(k);
 		SNA_FitnessFunction f = new SNA_FitnessFunction(g, vertices);
-		GA ga = new GA(GA.SelectionModel.TOURNAMENT_SELECT, f, vertices.size(), N, s, pc, pm, maxG, -1, k, vertices.values().toArray(new LTVertex[0]));
-		ga.doIt(false);
+		GA ga = new GA(GA.SelectionModel.TOURNAMENT_SELECT, f, vertices.size(), N, s, pc, pm, maxG, -1, k, vertices.values().toArray(new LTVertex[0]),
+				player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices);
+		ga.doIt(true);
 		Chromosome c = ga.getBestChromosome();
 		for (Integer ind:c.gene)
 			S.add(c.arrVertices[ind]);
@@ -214,9 +435,8 @@ public class Test {
 		HashSet<LTVertex> S = new HashSet<LTVertex>(k);
 		List<VertexWithData> CELF_queue = new SortedVertexList();
 		HashSet<LTVertex> activeVertices = new HashSet<LTVertex>(g.getVertexCount());
-		HashSet<LTVertex> newerActiveVertices = null;
+		Pair<HashSet<LTVertex>> newerActiveVertices = null;
 		HashSet<Vertex> activatedVertices = new HashSet<Vertex>();
-		int n = vertices.size();
 		LTVertex best;
 		VertexWithData bestWithData;
 
@@ -225,12 +445,12 @@ public class Test {
 		{
 			S.add(v);
 			activeVertices.clear();
-			resetState(vertices);
-			resetHold(vertices);
-			newerActiveVertices = runDiffusion(g, vertices, S, 0, activeVertices, Model.LTModel);
+			resetState(vertices, new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>());
+			resetHold(g, vertices);
+			newerActiveVertices = runDiffusion(g, vertices, S, new HashSet<LTVertex>(), 0, activeVertices, new HashSet<LTVertex>(), Model.LTModel);
 			activatedVertices = new HashSet<Vertex>(activeVertices.size());
 			activatedVertices.addAll(activeVertices);
-			activatedVertices.addAll(newerActiveVertices);
+			activatedVertices.addAll(newerActiveVertices.getFirst());
 			CELF_queue.add(new VertexWithData(v, activatedVertices.size()-spread));
 			S.remove(v);
 		}
@@ -239,13 +459,13 @@ public class Test {
 			best = CELF_queue.get(CELF_queue.size()-1).vertex;
 			CELF_queue.remove(CELF_queue.size()-1);
 			S.add(best);
-			resetState(vertices);
-			resetHold(vertices);
+			resetState(vertices, new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>());
+			resetHold(g, vertices);
 			activeVertices.clear();
-			newerActiveVertices = runDiffusion(g, vertices, S, 0, activeVertices, Model.LTModel);
+			newerActiveVertices = runDiffusion(g, vertices, S, new HashSet<LTVertex>(), 0, activeVertices, new HashSet<LTVertex>(), Model.LTModel);
 			S.remove(best);
 			activatedVertices.clear();
-			activatedVertices.addAll(newerActiveVertices);
+			activatedVertices.addAll(newerActiveVertices.getFirst());
 			activatedVertices.addAll(activeVertices);
 			bestWithData = new VertexWithData(best, activatedVertices.size()-spread);
 			CELF_queue.add(bestWithData);
@@ -570,16 +790,42 @@ public class Test {
 		return g;
 	}
 	
-	private static void resetState(HashMap<Integer, LTVertex> vertices)
+	private static void resetState(HashMap<Integer, LTVertex> vertices, 
+			HashSet<LTVertex> player1NewlyActiveVertices, HashSet<LTVertex> player2NewlyActiveVertices, 
+			HashSet<LTVertex> player1ActiveVertices, HashSet<LTVertex> player2ActiveVertices)
 	{
 		for (Vertex v:vertices.values())
-			v.state = Vertex.State.INACTIVE;
+		{
+			if (player1NewlyActiveVertices.contains(v))
+				v.state = Vertex.State.PLAYER1_NEWLY_ACTIVE;
+			else if (player2NewlyActiveVertices.contains(v))
+				v.state = Vertex.State.PLAYER2_NEWLY_ACTIVE;
+			else if (player1ActiveVertices.contains(v))
+				v.state = Vertex.State.PLAYER1_ACTIVE;
+			else if (player2ActiveVertices.contains(v))
+				v.state = Vertex.State.PLAYER2_ACTIVE;
+			else
+				v.state = Vertex.State.INACTIVE;
+		}
 	}
 	
-	private static void resetHold(HashMap<Integer, LTVertex> vertices)
+	private static void resetHold(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices)
 	{
 		for (LTVertex v:vertices.values())
-			v.ltHold = 0;
+		{
+			v.ltHold1 = 0;
+			v.ltHold2 = 0;
+			// something dangerous
+			/*if (v.state == Vertex.State.INACTIVE)
+				for (LTVertex p:g.getPredecessors(v))
+				{
+					if (p.state == Vertex.State.PLAYER1_ACTIVE)
+						v.ltHold1 += g.findEdge(p, v).ltInfluence;
+					else if (p.state == Vertex.State.PLAYER2_ACTIVE)
+						v.ltHold2 += g.findEdge(p, v).ltInfluence;
+				}
+			*/
+		}
 	}
 	
 	private static LTVertex getVertex(int vertexIndex, HashMap<Integer, LTVertex> vertices, Model model)
@@ -632,44 +878,76 @@ public class Test {
 	            quickSort(index, arr, indexI, right);
 	}
 	
-	private static HashSet<LTVertex> runDiffusion(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, 
-			HashSet<LTVertex> newlyActiveVertices, int rounds, HashSet<LTVertex> activeVertices, Model model)
+	private static Pair<HashSet<LTVertex>> runDiffusion(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, 
+			HashSet<LTVertex> newlyActiveVertices1, HashSet<LTVertex> newlyActiveVertices2, int rounds, 
+			HashSet<LTVertex> activeVertices1, HashSet<LTVertex> activeVertices2, Model model)
 	{
 		// TODO Auto-generated method stub
 		Collection<LTEdge> edges;
 		LTVertex successor;
-		HashSet<LTVertex> newerActiveVertices = null;
+		HashSet<LTVertex> newerActiveVertices1 = null;
+		HashSet<LTVertex> newerActiveVertices2 = null;
 		for (int round = 0; round < rounds || (rounds==0); round++)
 		{
-			newerActiveVertices = new HashSet<LTVertex>(g.getVertexCount());
-			for (LTVertex v:newlyActiveVertices)
+			newerActiveVertices1 = new HashSet<LTVertex>(g.getVertexCount());
+			newerActiveVertices2 = new HashSet<LTVertex>(g.getVertexCount());
+			for (LTVertex v:newlyActiveVertices1)
 			{
-				v.state = Vertex.State.ACTIVE;
-				activeVertices.add(v);
+				v.state = Vertex.State.PLAYER1_ACTIVE;
+				activeVertices1.add(v);
 				edges = g.getOutEdges(v);
 				for (LTEdge edge:edges)
 				{
 					successor = g.getDest(edge);
 					if (successor.state == Vertex.State.INACTIVE)
 					{
-							((LTVertex)successor).ltHold += ((LTEdge)edge).ltInfluence;
-							if (((LTVertex)successor).ltHold > ((LTVertex)successor).ltThreshold)
-							{
-								successor.state = Vertex.State.NEWLY_ACTIVE;
-								newerActiveVertices.add(successor);
-							}
-						
+						((LTVertex)successor).ltHold1 += ((LTEdge)edge).ltInfluence;
+						if (((LTVertex)successor).ltHold1 > ((LTVertex)successor).ltThreshold)
+						{
+							successor.state = Vertex.State.PLAYER1_NEWLY_ACTIVE;
+							newerActiveVertices1.add(successor);
+						}
 					}
 				}
 			}
-			if (newerActiveVertices.size() == 0)
+			for (LTVertex v:newlyActiveVertices2)
+			{
+				v.state = Vertex.State.PLAYER2_ACTIVE;
+				activeVertices2.add(v);
+				edges = g.getOutEdges(v);
+				for (LTEdge edge:edges)
+				{
+					successor = g.getDest(edge);
+					if (successor.state == Vertex.State.INACTIVE)
+					{
+						((LTVertex)successor).ltHold2 += ((LTEdge)edge).ltInfluence;
+						if (((LTVertex)successor).ltHold2 > ((LTVertex)successor).ltThreshold)
+						{
+							successor.state = Vertex.State.PLAYER2_NEWLY_ACTIVE;
+							newerActiveVertices2.add(successor);
+						}
+					}
+					else if (successor.state == Vertex.State.PLAYER1_NEWLY_ACTIVE)
+					{
+						((LTVertex)successor).ltHold2 += ((LTEdge)edge).ltInfluence;
+						if (((LTVertex)successor).ltHold2 >= ((LTVertex)successor).ltHold1)
+						{
+							successor.state = Vertex.State.PLAYER2_NEWLY_ACTIVE;
+							newerActiveVertices2.add(successor);
+							newerActiveVertices1.remove(successor);
+						}
+					}
+				}
+			}
+			if (newerActiveVertices1.size() == 0 && newerActiveVertices2.size() == 0)
 			{
 				//System.out.println("End of diffusion when round"+round);
 				break;
 			}
-			newlyActiveVertices = newerActiveVertices;
+			newlyActiveVertices1 = newerActiveVertices1;
+			newlyActiveVertices2 = newerActiveVertices2;
 		}
 		
-		return newerActiveVertices;
+		return new Pair<HashSet<LTVertex>>(newerActiveVertices1, newerActiveVertices2);
 	}
 }
