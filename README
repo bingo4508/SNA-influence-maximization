@@ -1,0 +1,2 @@
+In order to run the influence maximization game, please install python3 and networkx(in python3) first.
+Please change the permission of shell script. E.g. chmod 744 run.sh
