@@ -5,12 +5,13 @@ public class GA {
 	public static MyRand myRand = new MyRand();
 
 	public GA (SelectionModel n_sModel, FitnessFunction f, int n_ell, int n_nInitial, int n_selectionPressure, double n_pc,
-		double n_pm, int n_maxGen, int n_maxFe, int k, Test.LTVertex[] arrVertices,
+		double n_pm, int n_maxGen, int n_maxFe, int k, int round, Test.LTVertex[] arrVertices,
 		HashSet<Test.LTVertex> player1NewlyActiveVertices, HashSet<Test.LTVertex> player2NewlyActiveVertices, 
 		HashSet<Test.LTVertex> player1ActiveVertices, HashSet<Test.LTVertex> player2ActiveVertices)
 	{
-		never = true;
+		//never = true;
 		this.k = k;
+		this.round = round;
 		this.arrVertices = arrVertices;
 		init (n_sModel, f, n_ell, n_nInitial, n_selectionPressure, n_pc, n_pm, n_maxGen, n_maxFe);
 	}
@@ -37,8 +38,8 @@ public class GA {
 	    selectionIndex = new int[nInitial];
 
 	    for (i = 0; i < nInitial; i++) {
-	    	population[i] = new Chromosome(f, k, arrVertices);
-	    	offspring[i] = new Chromosome(f, k, arrVertices);
+	    	population[i] = new Chromosome(f, k, round, arrVertices);
+	    	offspring[i] = new Chromosome(f, k, round, arrVertices);
 	    }
 
 	    initializePopulation ();
@@ -50,8 +51,11 @@ public class GA {
 		for (int i = 0; i < nInitial; i++)
 		{
 			myRand.uniformArray(array, 0, array.length, 0, array.length-1);
-			for (int j = 0; j < k; j++)
-				population[i].gene.add(array[j]);
+			for (int r = 0; r < round; r++)
+			{
+				for (int j = 0; j < k; j++)
+					population[i].gene.get(r).add(array[r*k+j]);
+			}
 		}
 	}
 
@@ -174,47 +178,44 @@ public class GA {
 	
 	private void mySNA_XO(final Chromosome p1, final Chromosome p2, Chromosome c1, Chromosome c2)
 	{
-		if (p1.gene.size() != k || p2.gene.size() != k)
+		for (int r = 0; r < round; r++)
 		{
-			System.out.println("Error on seed size");
-		}
-		HashSet<Integer> seedsInBothGene = new HashSet<Integer>();
-		seedsInBothGene.addAll(p1.gene);
-		seedsInBothGene.retainAll(p2.gene);
-		HashSet<Integer> seedsOnlyInOne = new HashSet<Integer>();
-		seedsOnlyInOne.addAll(p1.gene);
-		seedsOnlyInOne.removeAll(seedsInBothGene);
-		Integer seedIndex1[] = seedsOnlyInOne.toArray(new Integer[0]);
-		seedsOnlyInOne.clear();
-		seedsOnlyInOne.addAll(p2.gene);
-		seedsOnlyInOne.removeAll(seedsInBothGene);
-		Integer seedIndex2[] = seedsOnlyInOne.toArray(new Integer[0]);
-		int randArray1[] = new int [seedIndex1.length];
-		int randArray2[] = new int [seedIndex2.length];
-		myRand.uniformArray(randArray1, 0, seedIndex1.length, 0, seedIndex1.length-1);
-		myRand.uniformArray(randArray2, 0, seedIndex2.length, 0, seedIndex2.length-1);
-		c1.gene.clear();
-		c2.gene.clear();
-		for (int i = 0; i < seedIndex1.length; i++)
-		{
-			if (myRand.flip())
+			HashSet<Integer> seedsInBothGene = new HashSet<Integer>();
+			seedsInBothGene.addAll(p1.gene.get(r));
+			seedsInBothGene.retainAll(p2.gene.get(r));
+			HashSet<Integer> seedsOnlyInOne = new HashSet<Integer>();
+			seedsOnlyInOne.addAll(p1.gene.get(r));
+			seedsOnlyInOne.removeAll(seedsInBothGene);
+			Integer seedIndex1[] = seedsOnlyInOne.toArray(new Integer[0]);
+			seedsOnlyInOne.clear();
+			seedsOnlyInOne.addAll(p2.gene.get(r));
+			seedsOnlyInOne.removeAll(seedsInBothGene);
+			Integer seedIndex2[] = seedsOnlyInOne.toArray(new Integer[0]);
+			int randArray1[] = new int [seedIndex1.length];
+			int randArray2[] = new int [seedIndex2.length];
+			myRand.uniformArray(randArray1, 0, seedIndex1.length, 0, seedIndex1.length-1);
+			myRand.uniformArray(randArray2, 0, seedIndex2.length, 0, seedIndex2.length-1);
+			c1.gene.get(r).clear();
+			c2.gene.get(r).clear();
+			for (int i = 0; i < seedIndex1.length; i++)
 			{
-				c1.gene.add(seedIndex2[randArray2[i]]);
-				c2.gene.add(seedIndex1[randArray1[i]]);
+				if (myRand.uniform() < pc)
+				{
+					c1.gene.get(r).add(seedIndex2[randArray2[i]]);
+					c2.gene.get(r).add(seedIndex1[randArray1[i]]);
+				}
+				else
+				{
+					c1.gene.get(r).add(seedIndex1[randArray1[i]]);
+					c2.gene.get(r).add(seedIndex2[randArray2[i]]);
+				}
 			}
-			else
+			for (Integer ind:seedsInBothGene)
 			{
-				c1.gene.add(seedIndex1[randArray1[i]]);
-				c2.gene.add(seedIndex2[randArray2[i]]);
+				c1.gene.get(r).add(ind);
+				c2.gene.get(r).add(ind);
 			}
 		}
-		for (Integer ind:seedsInBothGene)
-		{
-			c1.gene.add(ind);
-			c2.gene.add(ind);
-		}
-		if (c1.gene.size()!=k || c2.gene.size()!=k)
-			System.out.println();
 	}
 
 	public void mutation ()
@@ -225,7 +226,7 @@ public class GA {
 	
 	public void simpleMutation()
 	{
-		int r;
+		int q;
 		HashSet<Integer> allIndex = new HashSet<Integer>(arrVertices.length);
 	    for (int i = 0; i < arrVertices.length; i++)
 	    {
@@ -236,31 +237,38 @@ public class GA {
 		{
 			if (myRand.uniform()<pm)
 			{
-				r = myRand.uniformInt(0, ell-1);
+				q = myRand.uniformInt(0, ell-1);
 				
 				HashSet<Integer> seedsIndex = new HashSet<Integer> (k);
 				HashSet<Integer> notSeedsIndex = new HashSet<Integer> (arrVertices.length-k);
-				seedsIndex.addAll(c.gene);
+				for (int r = 0; r < round; r++)
+					seedsIndex.addAll(c.gene.get(r));
 				notSeedsIndex.addAll(allIndex);
 				notSeedsIndex.removeAll(seedsIndex);
 				
-				if (c.gene.contains(r))
+				if (seedsIndex.contains(q))
 				{
-					c.gene.remove(r);
-					Integer arrNotSeedsIndex[] = notSeedsIndex.toArray(new Integer[0]);
-					c.gene.add(arrNotSeedsIndex[myRand.uniformInt(0, arrNotSeedsIndex.length-1)]);
+					for (int r = 0; r < round; r++)
+						if (c.gene.get(r).contains(q))
+						{
+							c.gene.get(r).remove(q);
+							Integer arrNotSeedsIndex[] = notSeedsIndex.toArray(new Integer[0]);
+							c.gene.get(r).add(arrNotSeedsIndex[myRand.uniformInt(0, arrNotSeedsIndex.length-1)]);
+							break;
+						}
 				}
 				else
 				{
-					c.gene.add(r);
-					Integer arrSeedsIndex[] = seedsIndex.toArray(new Integer[0]);
-					c.gene.remove(arrSeedsIndex[myRand.uniformInt(0, arrSeedsIndex.length-1)]);
+					int r = myRand.uniformInt(0, round-1);
+					Integer arrSeedsIndex[] = c.gene.get(r).toArray(new Integer[0]);
+					c.gene.get(r).add(q);
+					c.gene.get(r).remove(arrSeedsIndex[myRand.uniformInt(0, arrSeedsIndex.length-1)]);
 				}
 			}
 		}
 	}
 	
-	public void mutationClock ()
+	/*public void mutationClock ()
 	{
 		if (pm <= 1e-6) return; // can't deal with too small pm
 
@@ -297,7 +305,7 @@ public class GA {
 		// Compute next mutation clock
 		pointer += (int) (Math.log(1-myRand.uniform()) / Math.log(1-pm) + 1);
 	    };
-	}
+	}*/
 
 	public void replacePopulation ()
 	{
@@ -313,20 +321,20 @@ public class GA {
 	    nCurrent = nNextGeneration;
 	}
 
-	public boolean never;
+	//public boolean never;
 	public void showStatistics ()
 	{
 		System.out.printf ("Gen:%d  Fitness:(Max/Mean/Min):%f/%f/%f \n",
 		        generation, stFitness.getMax (), stFitness.getMean (),
 		        stFitness.getMin ());
-	    System.out.printf ("best chromosome:");
-	    population[bestIndex].printf ();
+	    //System.out.printf ("best chromosome:");
+	    //population[bestIndex].printf ();
 	    System.out.printf ("\n");
-	    if (population[bestIndex].fitness > 880 && never)
+	    /*if (population[bestIndex].fitness > 880 && never)
 	    {
 	    	Test.output.print("Get 800, "+generation+", ");
 	    	never = false;
-	    }
+	    }*/
 	}
 	
 	public void oneRun (boolean output)
@@ -367,10 +375,10 @@ public class GA {
 	    while (!shouldTerminate ()) {
 	        oneRun (output);
 	    }
-	    if (never)
+	    /*if (never)
 	    {
 	    	Test.output.print("Not get 800, "+generation+", ");
-	    }
+	    }*/
 	    return generation;
 	}
 	
@@ -427,6 +435,7 @@ public class GA {
 
     protected int ell;                 // chromosome length
     protected int k;
+    protected int round;
     protected int nInitial;            // initial population size
     protected int nCurrent;            // current population size
     protected int nNextGeneration;     // population size for the next generation

@@ -1,12 +1,14 @@
+import java.util.ArrayList;
 import java.util.HashSet;
 
 
 public class Chromosome {
 	
-	public Chromosome (FitnessFunction f, int k, Test.LTVertex arrVertices[])
+	public Chromosome (FitnessFunction f, int k, int round, Test.LTVertex arrVertices[])
 	{
 		this.arrVertices = arrVertices;
-		gene = null;
+		this.round = round;
+		gene = new ArrayList<HashSet<Integer>>(round);
 	    init (k);
 	    this.f = f;
 	}
@@ -16,9 +18,12 @@ public class Chromosome {
 	    evaluated = c.evaluated;
 	    fitness = c.fitness;
 	    arrVertices = c.arrVertices;
-	    
-	    gene.clear();
-	    gene.addAll(c.gene);
+
+    	for (int i = 0; i < 10; i++)
+    	{
+    		gene.get(i).clear();
+    		gene.get(i).addAll(c.gene.get(i));
+    	}
 
 	    return this;
 	}
@@ -26,7 +31,10 @@ public class Chromosome {
 	public void init (int k)
 	{
 		this.k = k;
-	    gene = new HashSet<Integer>(k);
+		for (int r = 0; r < round; r++)
+		{
+			gene.add(new HashSet<Integer>(k));
+		}
 	    evaluated = false;
 	}
 
@@ -52,8 +60,13 @@ public class Chromosome {
 
 	public void printf ()
 	{
-	    for (Integer v:gene)
-	        System.out.printf ("%d ", arrVertices[v].vertexIndex);
+		for (int r = 0; r < round; r++)
+		{
+			System.out.printf("round"+(r+1)+": ");
+		    for (Integer v:gene.get(r))
+		        System.out.printf ("%d ", arrVertices[v].vertexIndex);
+			System.out.println();
+		}
 	}
 
 
@@ -64,8 +77,9 @@ public class Chromosome {
 		return f.maxFitness();
 	}
 
-	public HashSet<Integer> gene;
+	public ArrayList<HashSet<Integer>> gene;
 	protected int k;
+	protected int round;
 	protected double fitness;
 	protected boolean evaluated;
 	protected FitnessFunction f;

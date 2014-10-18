@@ -65,25 +65,45 @@ public class Test {
 	private static class SNA_FitnessFunction implements FitnessFunction {
 		Graph<LTVertex, LTEdge> g;
 		HashMap<Integer, LTVertex> vertices;
-		public SNA_FitnessFunction(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices)
+		int round;
+		public SNA_FitnessFunction(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, int round)
 		{
 			this.g = g;
 			this.vertices = vertices;
+			this.round = round;
 		}
 		@Override
 		public double evaluate(Chromosome c)
 		{
 			HashSet<LTVertex> seeds = new HashSet<LTVertex>();
-			for (Integer ind:c.gene)
-				seeds.add(c.arrVertices[ind]);
-			HashSet<LTVertex> activeVertices = new HashSet<LTVertex>(g.getVertexCount());
-			Pair<HashSet<LTVertex>> newerActiveVertices = null;
+			HashSet<LTVertex> activeVertices = new HashSet<LTVertex>();
+			Pair<HashSet<LTVertex>> newerActiveVertices = new Pair<HashSet<LTVertex>>(new HashSet<LTVertex>(), new HashSet<LTVertex>());
+			HashSet<Vertex> activatedVertices= new HashSet<Vertex>(activeVertices.size());
+			
 			resetState(vertices, new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>());
 			resetHold(g, vertices);
+			for (int r = 0; r < round; r++)
+			{
+				seeds.clear();
+				seeds.addAll(newerActiveVertices.getFirst());
+				for (Integer ind:c.gene.get(r))
+					seeds.add(c.arrVertices[ind]);
+				activeVertices.clear();
+				newerActiveVertices = null;
+				
+				newerActiveVertices = runDiffusion(g, vertices, seeds, new HashSet<LTVertex>(), 1, activeVertices, new HashSet<LTVertex>(), Model.LTModel);
+				activatedVertices.addAll(activeVertices);
+				activatedVertices.addAll(newerActiveVertices.getFirst());
+			}
+			seeds.clear();
+			seeds.addAll(newerActiveVertices.getFirst());
+			activeVertices.clear();
+			newerActiveVertices = null;
+			
 			newerActiveVertices = runDiffusion(g, vertices, seeds, new HashSet<LTVertex>(), 0, activeVertices, new HashSet<LTVertex>(), Model.LTModel);
-			HashSet<Vertex> activatedVertices = new HashSet<Vertex>(activeVertices.size());
 			activatedVertices.addAll(activeVertices);
 			activatedVertices.addAll(newerActiveVertices.getFirst());
+			
 			return activatedVertices.size();
 		}
 		@Override
@@ -151,9 +171,9 @@ public class Test {
 	
 	public static void main(String[] args)
 	{
-		testStratergyForOneParty();
+		//testStratergyForOnePartyGA();
 		//testStratergyForMultiParty(args);
-		
+		testStratergyForOnePartyGreedy();
 	}
 	
 	private static void testStratergyForMultiParty(String []args)
@@ -204,6 +224,7 @@ public class Test {
 		HashSet<LTVertex> player2ActiveVertices = new HashSet<LTVertex>();
 		HashSet<LTVertex> player1NewlyActiveVertices = new HashSet<LTVertex>();
 		HashSet<LTVertex> player2NewlyActiveVertices = new HashSet<LTVertex>();
+		int round = 10;
 		try 
 		{
 			input = new BufferedReader(new FileReader(inputFile.statusFileName));
@@ -217,6 +238,7 @@ public class Test {
 		}
 		while(line[0] != null)
 		{
+			round--;
 			nodes = line[0].split(" ");		//seeds in previous round, so it's Active.
 			for (String node:nodes)
 			{
@@ -272,7 +294,7 @@ public class Test {
 		int N1 = 5000, s1 = 2, maxG = 6;
 		double pc1 = 0.5, pm1 = 0.01;
 		
-		return GA(g, vertices, player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices, k, N1, s1, pc1, pm1, maxG);
+		return GA(g, vertices, player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices, k, round, N1, s1, pc1, pm1, maxG).get(0);
 	}
 	
 	private static HashSet<LTVertex> stratergyForPlayer2(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, int k, InputFileCollect inputFile)
@@ -284,6 +306,7 @@ public class Test {
 		HashSet<LTVertex> player2ActiveVertices = new HashSet<LTVertex>();
 		HashSet<LTVertex> player1NewlyActiveVertices = new HashSet<LTVertex>();
 		HashSet<LTVertex> player2NewlyActiveVertices = new HashSet<LTVertex>();
+		int round = 10;
 		try 
 		{
 			input = new BufferedReader(new FileReader(inputFile.statusFileName));
@@ -297,6 +320,7 @@ public class Test {
 		}
 		while(line[1] != null)
 		{
+			round--;
 			nodes = line[0].split(" ");		//seeds in previous round, so it's Active.
 			for (String node:nodes)
 			{
@@ -355,28 +379,30 @@ public class Test {
 		int N1 = 5000, s1 = 2, maxG = 6;
 		double pc1 = 0.5, pm1 = 0.01;
 		
-		return GA(g, vertices, player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices, k, N1, s1, pc1, pm1, maxG);
+		return GA(g, vertices, player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices, k, round, N1, s1, pc1, pm1, maxG).get(0);
 	}
-	public static PrintStream output = null;
-	private static void testStratergyForOneParty()
+	//public static PrintStream output = null;
+	private static void testStratergyForOnePartyGA()
 	{
 		InputFileCollect[] inputFiles = new InputFileCollect[]{
 				new InputFileCollect("partB_hepth_lt_edges.txt", "partB_hepth_lt_nodes.txt", ""),
 				new InputFileCollect("partB_egofb_lt_edges.txt", "partB_egofb_lt_nodes.txt", ""),
 		};
 		
-		try {
+		/*try {
 			output = new PrintStream(new File("TestGA_WithDifferentPC_PM2.cvs"));
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
+		}*/
 		
 		Graph<LTVertex, LTEdge> g;
 		HashMap<Integer, LTVertex> vertices;
-		HashSet<LTVertex> seeds;
+		ArrayList<HashSet<LTVertex>> seedsArray;
+		HashSet<LTVertex> seeds = new HashSet<LTVertex>();
 		int k = 10;
-		double ita = 0.01;
+		int round = 10;
+		/*double ita = 0.01;
 		int ell = 4;
 		int N[] = {500, 600, 700, 800, 900, 1000};
 		int s[] = {2, 3};
@@ -389,7 +415,7 @@ public class Test {
 		for (int i = 0; i < 24; i++)
 		{
 			pm[i] = (i+1)*0.04;
-		}
+		}*/
 		for (int f = 0; f < 2; f++)
 		{
 			vertices = new HashMap<Integer, LTVertex>();
@@ -398,76 +424,149 @@ public class Test {
 			//seeds = simpleGreedy(g, vertices, k);
 			long now = System.currentTimeMillis();
 			
-			output.println("f: "+f);
+			//output.println("f: "+f);
 			/*for(int N1:N)
-				for(int s1:s)*/
+				for(int s1:s)
 					for (double pc1:pc)
-						for (double pm1:pm)
+						for (double pm1:pm)*/
 			{
-			int N1 = 900, s1 = 2, maxG = 25;
-			//double pc1 = 0.5, pm1 = 0.1;
+			int N1 = 900, s1 = 2, maxG = -1;
+			double pc1 = 0.5625, pm1 = 0.12;
 			
-					//maxG = 30000/N1;
-							seeds = GA(g, vertices, new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), k, N1, s1, pc1, pm1, maxG);
+			//maxG = 30000/N1;
+			seedsArray = GA(g, vertices, new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), k, round, N1, s1, pc1, pm1, maxG);
 			//seeds = SIMPATH(g, vertices, ita, ell, k);
 
-				HashSet<LTVertex> activeVertices = new HashSet<LTVertex>(g.getVertexCount());
-				Pair<HashSet<LTVertex>> newerActiveVertices = null;
-				resetState(vertices, new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>());
-				resetHold(g, vertices);
-				newerActiveVertices = runDiffusion(g, vertices, seeds, new HashSet<LTVertex>(), 0, activeVertices, new HashSet<LTVertex>(), inputFiles[f].model);
+			HashSet<LTVertex> activeVertices = new HashSet<LTVertex>();
+			Pair<HashSet<LTVertex>> newerActiveVertices = new Pair<HashSet<LTVertex>>(new HashSet<LTVertex>(), new HashSet<LTVertex>());
+			HashSet<Vertex> activatedVertices= new HashSet<Vertex>(activeVertices.size());
+			
+			resetState(vertices, new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>());
+			resetHold(g, vertices);
+			for (int r = 0; r < round; r++)
+			{
+				seeds.clear();
+				seeds.addAll(newerActiveVertices.getFirst());
+				seeds.addAll(seedsArray.get(r));
+				activeVertices.clear();
+				newerActiveVertices = null;
 				
-				//System.out.println("Running LT model ...");
-				
-				HashSet<Vertex> activatedVertices = new HashSet<Vertex>(activeVertices.size());
+				newerActiveVertices = runDiffusion(g, vertices, seeds, new HashSet<LTVertex>(), 1, activeVertices, new HashSet<LTVertex>(), Model.LTModel);
 				activatedVertices.addAll(activeVertices);
 				activatedVertices.addAll(newerActiveVertices.getFirst());
-				
-				//System.out.println("Spread: "+activatedVertices.size());
-				output.println(""+N1+", "+s1+", "+pc1+", "+pm1+", "+maxG+", "+activatedVertices.size()+", "+(System.currentTimeMillis()-now));
+			}
+			seeds.clear();
+			seeds.addAll(newerActiveVertices.getFirst());
+			activeVertices.clear();
+			newerActiveVertices = null;
+			
+			newerActiveVertices = runDiffusion(g, vertices, seeds, new HashSet<LTVertex>(), 0, activeVertices, new HashSet<LTVertex>(), Model.LTModel);
+			activatedVertices.addAll(activeVertices);
+			activatedVertices.addAll(newerActiveVertices.getFirst());
+				System.out.println("Spread: "+activatedVertices.size());
+				//output.println(""+N1+", "+s1+", "+pc1+", "+pm1+", "+maxG+", "+activatedVertices.size()+", "+(System.currentTimeMillis()-now));
 				now = System.currentTimeMillis();
 				//System.out.println();
 			}
 			
 		}
-		output.close();
+		//output.close();
 	}
 	
-	private static HashSet<LTVertex> GA(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, 
+	private static void testStratergyForOnePartyGreedy()
+	{
+		InputFileCollect[] inputFiles = new InputFileCollect[]{
+				new InputFileCollect("partB_hepth_lt_edges.txt", "partB_hepth_lt_nodes.txt", ""),
+				new InputFileCollect("partB_egofb_lt_edges.txt", "partB_egofb_lt_nodes.txt", ""),
+		};
+		
+		Graph<LTVertex, LTEdge> g;
+		HashMap<Integer, LTVertex> vertices;
+		HashSet<LTVertex> seeds = new HashSet<LTVertex>();
+		int k = 10;
+		int round = 10;
+		for (int f = 0; f < 2; f++)
+		{
+			vertices = new HashMap<Integer, LTVertex>();
+			g = createGraph(inputFiles[f], vertices);
+			System.out.println(inputFiles[f].edgesFileName+": ");
+
+			HashSet<LTVertex> activeVertices = new HashSet<LTVertex>();
+			Pair<HashSet<LTVertex>> newerActiveVertices = new Pair<HashSet<LTVertex>>(new HashSet<LTVertex>(), new HashSet<LTVertex>());
+			HashSet<LTVertex> activatedVertices= new HashSet<LTVertex>(activeVertices.size());
+			
+			
+			for (int r = 0; r < round; r++)
+			{
+				seeds = simpleGreedy(g, vertices, k, newerActiveVertices, activatedVertices);
+				resetState(vertices, newerActiveVertices.getFirst(), newerActiveVertices.getSecond(), activatedVertices, new HashSet<LTVertex>());
+				resetHold(g, vertices);
+				activatedVertices.addAll(newerActiveVertices.getFirst());
+				seeds.addAll(newerActiveVertices.getFirst());
+				activeVertices.clear();
+				newerActiveVertices = null;
+				
+				newerActiveVertices = runDiffusion(g, vertices, seeds, new HashSet<LTVertex>(), 1, activeVertices, new HashSet<LTVertex>(), Model.LTModel);
+				activatedVertices.addAll(activeVertices);
+			}
+			activatedVertices.addAll(newerActiveVertices.getFirst());
+			seeds.clear();
+			seeds.addAll(newerActiveVertices.getFirst());
+			activeVertices.clear();
+			newerActiveVertices = null;
+			
+			newerActiveVertices = runDiffusion(g, vertices, seeds, new HashSet<LTVertex>(), 0, activeVertices, new HashSet<LTVertex>(), Model.LTModel);
+			activatedVertices.addAll(activeVertices);
+			activatedVertices.addAll(newerActiveVertices.getFirst());
+				System.out.println("Spread: "+activatedVertices.size());
+				//output.println(""+N1+", "+s1+", "+pc1+", "+pm1+", "+maxG+", "+activatedVertices.size()+", "+(System.currentTimeMillis()-now));
+				//System.out.println();
+		}
+	}
+	
+	private static ArrayList<HashSet<LTVertex>> GA(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, 
 			HashSet<LTVertex> player1NewlyActiveVertices, HashSet<LTVertex> player2NewlyActiveVertices, 
 			HashSet<LTVertex> player1ActiveVertices, HashSet<LTVertex> player2ActiveVertices,
-			int k, int N, int s, double pc, double pm, int maxG)
+			int k, int round, int N, int s, double pc, double pm, int maxG)
 	{
-		HashSet<LTVertex> S = new HashSet<LTVertex>(k);
-		SNA_FitnessFunction f = new SNA_FitnessFunction(g, vertices);
-		GA ga = new GA(GA.SelectionModel.TOURNAMENT_SELECT, f, vertices.size(), N, s, pc, pm, maxG, -1, k, vertices.values().toArray(new LTVertex[0]),
+		ArrayList<HashSet<LTVertex>> S = new ArrayList<HashSet<LTVertex>>(round);
+		for (int r = 0; r < round; r++)
+			S.add(new HashSet<LTVertex>(k));
+		SNA_FitnessFunction f = new SNA_FitnessFunction(g, vertices, round);
+		
+		GA ga = new GA(GA.SelectionModel.TOURNAMENT_SELECT, f, vertices.size(), N, s, pc, pm, maxG, -1, k, round, vertices.values().toArray(new LTVertex[0]),
 				player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices);
 		ga.doIt(true);
+		
 		Chromosome c = ga.getBestChromosome();
-		for (Integer ind:c.gene)
-			S.add(c.arrVertices[ind]);
+		for (int r = 0; r < round; r++)
+		{
+			for (Integer ind:c.gene.get(r))
+				S.get(r).add(c.arrVertices[ind]);
+		}
 		return S;
 	}
 	
-	private static HashSet<LTVertex> simpleGreedy(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, int k)
+	private static HashSet<LTVertex> simpleGreedy(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, int k, Pair<HashSet<LTVertex>> origNewerActiveVertices,
+			HashSet<LTVertex> origActivatedVertices)
 	{
 		HashSet<LTVertex> S = new HashSet<LTVertex>(k);
 		List<VertexWithData> CELF_queue = new SortedVertexList();
 		HashSet<LTVertex> activeVertices = new HashSet<LTVertex>(g.getVertexCount());
+		HashSet<LTVertex> activatedVertices = null;
 		Pair<HashSet<LTVertex>> newerActiveVertices = null;
-		HashSet<Vertex> activatedVertices = new HashSet<Vertex>();
 		LTVertex best;
 		VertexWithData bestWithData;
-
+		
 		int spread = 0;
 		for (LTVertex v:vertices.values())
 		{
 			S.add(v);
 			activeVertices.clear();
-			resetState(vertices, new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>());
+			resetState(vertices, origNewerActiveVertices.getFirst(), origNewerActiveVertices.getSecond(), origActivatedVertices, new HashSet<LTVertex>());
 			resetHold(g, vertices);
 			newerActiveVertices = runDiffusion(g, vertices, S, new HashSet<LTVertex>(), 0, activeVertices, new HashSet<LTVertex>(), Model.LTModel);
-			activatedVertices = new HashSet<Vertex>(activeVertices.size());
+			activatedVertices = new HashSet<LTVertex>(activeVertices.size());
 			activatedVertices.addAll(activeVertices);
 			activatedVertices.addAll(newerActiveVertices.getFirst());
 			CELF_queue.add(new VertexWithData(v, activatedVertices.size()-spread));
@@ -478,7 +577,7 @@ public class Test {
 			best = CELF_queue.get(CELF_queue.size()-1).vertex;
 			CELF_queue.remove(CELF_queue.size()-1);
 			S.add(best);
-			resetState(vertices, new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>());
+			resetState(vertices, origNewerActiveVertices.getFirst(), origNewerActiveVertices.getSecond(), origActivatedVertices, new HashSet<LTVertex>());
 			resetHold(g, vertices);
 			activeVertices.clear();
 			newerActiveVertices = runDiffusion(g, vertices, S, new HashSet<LTVertex>(), 0, activeVertices, new HashSet<LTVertex>(), Model.LTModel);
