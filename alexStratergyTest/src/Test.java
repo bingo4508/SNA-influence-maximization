@@ -357,13 +357,20 @@ public class Test {
 		
 		return GA(g, vertices, player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices, k, N1, s1, pc1, pm1, maxG);
 	}
-	
+	public static PrintStream output = null;
 	private static void testStratergyForOneParty()
 	{
 		InputFileCollect[] inputFiles = new InputFileCollect[]{
 				new InputFileCollect("partB_hepth_lt_edges.txt", "partB_hepth_lt_nodes.txt", ""),
 				new InputFileCollect("partB_egofb_lt_edges.txt", "partB_egofb_lt_nodes.txt", ""),
 		};
+		
+		try {
+			output = new PrintStream(new File("TestGA_WithDifferentPC_PM2.cvs"));
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
 		Graph<LTVertex, LTEdge> g;
 		HashMap<Integer, LTVertex> vertices;
@@ -373,8 +380,16 @@ public class Test {
 		int ell = 4;
 		int N[] = {500, 600, 700, 800, 900, 1000};
 		int s[] = {2, 3};
-		double pc[] = {0.5, 0.3, 0.1};
-		double pm[] = {0.01, 0.03, 0.05};
+		double pc[] = new double [15];
+		for (int i = 0; i < 15; i++)
+		{
+			pc[i] = (i+1)*0.0625;
+		}
+		double pm[] = new double[24];
+		for (int i = 0; i < 24; i++)
+		{
+			pm[i] = (i+1)*0.04;
+		}
 		for (int f = 0; f < 2; f++)
 		{
 			vertices = new HashMap<Integer, LTVertex>();
@@ -382,13 +397,16 @@ public class Test {
 			System.out.println(inputFiles[f].edgesFileName+": ");
 			//seeds = simpleGreedy(g, vertices, k);
 			long now = System.currentTimeMillis();
+			
+			output.println("f: "+f);
 			/*for(int N1:N)
-				for(int s1:s)
+				for(int s1:s)*/
 					for (double pc1:pc)
-						for (double pm1:pm)*/
-			int N1 = 900, s1 = 2, maxG = 25;
-			double pc1 = 0.5, pm1 = 0.01;
+						for (double pm1:pm)
 			{
+			int N1 = 900, s1 = 2, maxG = 25;
+			//double pc1 = 0.5, pm1 = 0.1;
+			
 					//maxG = 30000/N1;
 							seeds = GA(g, vertices, new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), k, N1, s1, pc1, pm1, maxG);
 			//seeds = SIMPATH(g, vertices, ita, ell, k);
@@ -406,12 +424,13 @@ public class Test {
 				activatedVertices.addAll(newerActiveVertices.getFirst());
 				
 				//System.out.println("Spread: "+activatedVertices.size());
-				System.out.println(""+N1+" "+s1+" "+pc1+" "+pm1+" "+(30000/N1)+" "+activatedVertices.size()+" "+(System.currentTimeMillis()-now));
+				output.println(""+N1+", "+s1+", "+pc1+", "+pm1+", "+maxG+", "+activatedVertices.size()+", "+(System.currentTimeMillis()-now));
 				now = System.currentTimeMillis();
 				//System.out.println();
 			}
 			
 		}
+		output.close();
 	}
 	
 	private static HashSet<LTVertex> GA(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, 

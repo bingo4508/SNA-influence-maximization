@@ -9,6 +9,7 @@ public class GA {
 		HashSet<Test.LTVertex> player1NewlyActiveVertices, HashSet<Test.LTVertex> player2NewlyActiveVertices, 
 		HashSet<Test.LTVertex> player1ActiveVertices, HashSet<Test.LTVertex> player2ActiveVertices)
 	{
+		never = true;
 		this.k = k;
 		this.arrVertices = arrVertices;
 		init (n_sModel, f, n_ell, n_nInitial, n_selectionPressure, n_pc, n_pm, n_maxGen, n_maxFe);
@@ -312,6 +313,7 @@ public class GA {
 	    nCurrent = nNextGeneration;
 	}
 
+	public boolean never;
 	public void showStatistics ()
 	{
 		System.out.printf ("Gen:%d  Fitness:(Max/Mean/Min):%f/%f/%f \n",
@@ -320,6 +322,11 @@ public class GA {
 	    System.out.printf ("best chromosome:");
 	    population[bestIndex].printf ();
 	    System.out.printf ("\n");
+	    if (population[bestIndex].fitness > 880 && never)
+	    {
+	    	Test.output.print("Get 800, "+generation+", ");
+	    	never = false;
+	    }
 	}
 	
 	public void oneRun (boolean output)
@@ -359,6 +366,10 @@ public class GA {
 
 	    while (!shouldTerminate ()) {
 	        oneRun (output);
+	    }
+	    if (never)
+	    {
+	    	Test.output.print("Not get 800, "+generation+", ");
 	    }
 	    return generation;
 	}
