@@ -11,6 +11,7 @@ public class Chromosome {
 		gene = new ArrayList<HashSet<Integer>>(round);
 	    init (k);
 	    this.f = f;
+	    
 	}
 	
 	public Chromosome copyFrom(Chromosome c)
@@ -19,7 +20,7 @@ public class Chromosome {
 	    fitness = c.fitness;
 	    arrVertices = c.arrVertices;
 
-    	for (int i = 0; i < 10; i++)
+    	for (int i = 0; i < round; i++)
     	{
     		gene.get(i).clear();
     		gene.get(i).addAll(c.gene.get(i));

@@ -1,3 +1,7 @@
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.HashSet;
 
 public class GA {
@@ -5,19 +9,22 @@ public class GA {
 	public static MyRand myRand = new MyRand();
 
 	public GA (SelectionModel n_sModel, FitnessFunction f, int n_ell, int n_nInitial, int n_selectionPressure, double n_pc,
-		double n_pm, int n_maxGen, int n_maxFe, int k, int round, Test.LTVertex[] arrVertices,
-		HashSet<Test.LTVertex> player1NewlyActiveVertices, HashSet<Test.LTVertex> player2NewlyActiveVertices, 
-		HashSet<Test.LTVertex> player1ActiveVertices, HashSet<Test.LTVertex> player2ActiveVertices)
+		double n_pm, int n_timeLimit, int n_maxFe, int k, int round, Test.LTVertex[] arrVertices, int saveChromosomeNum, boolean firstRound)
 	{
 		//never = true;
+		startTime = (int)System.currentTimeMillis()/1000;
+		pEndTime = startTime;
 		this.k = k;
 		this.round = round;
+		this.firstRound = firstRound;
+		this.saveChromosomeNum = saveChromosomeNum;
 		this.arrVertices = arrVertices;
-		init (n_sModel, f, n_ell, n_nInitial, n_selectionPressure, n_pc, n_pm, n_maxGen, n_maxFe);
+		
+		init (n_sModel, f, n_ell, n_nInitial, n_selectionPressure, n_pc, n_pm, n_timeLimit, n_maxFe);
 	}
 
 	public void init (SelectionModel n_sModel, FitnessFunction f, int n_ell, int n_nInitial, int n_selectionPressure, double n_pc,
-			double n_pm, int n_maxGen, int n_maxFe)
+			double n_pm, int n_timeLimit, int n_maxFe)
 	{
 		int i;
 
@@ -28,7 +35,7 @@ public class GA {
 	    selectionPressure = n_selectionPressure;
 	    pc = n_pc;
 	    pm = n_pm;
-	    maxGen = n_maxGen;
+	    timeLimit = n_timeLimit;
 	    maxFe = n_maxFe;
 	    stFitness = new Statistics();
 	    
@@ -48,7 +55,38 @@ public class GA {
 	public void initializePopulation ()
 	{
 		int array[] = new int[arrVertices.length];
-		for (int i = 0; i < nInitial; i++)
+		BufferedReader input = null;
+		String line = null;
+		String[] nodes;
+		int i = 0;
+		if (!firstRound)
+		{
+			try 
+			{
+				input = new BufferedReader(new FileReader("GA_preSelectedGene.txt"));
+				int scn = 0;
+				for (scn = 0; scn < saveChromosomeNum && line != null; scn++)
+					for (int r = 0; r < round && line != null; r++)
+					{
+						line = input.readLine();
+						if (line != null)
+						{
+							nodes = line.split(" ");
+							for (String node:nodes)
+								population[scn].gene.get(r).add(Integer.parseInt(node));
+						}
+					}
+				i = scn;
+			} catch (FileNotFoundException f)
+			{
+				i = 0;
+			}
+			catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		for (; i < nInitial; i++)
 		{
 			myRand.uniformArray(array, 0, array.length, 0, array.length-1);
 			for (int r = 0; r < round; r++)
@@ -341,10 +379,11 @@ public class GA {
 	{
 		int i;
 
-	    selection ();
+	    
 	    crossover ();
 	    mutation ();
 	    replacePopulation ();
+	    selection ();
 
 	    double max = -Double.MAX_VALUE;
 	    stFitness.reset ();
@@ -371,7 +410,8 @@ public class GA {
 	public int doIt (boolean output)
 	{
 		generation = 0;
-
+		
+		selection ();
 	    while (!shouldTerminate ()) {
 	        oneRun (output);
 	    }
@@ -397,10 +437,12 @@ public class GA {
 	            termination = true;
 	    }
 
-	    // Reach maximal # of generations
-	    if (maxGen != -1) {
-	        if (generation > maxGen)
+	    // Reach timeLimit - 15s
+	    if (timeLimit != -1) {
+	    	int endTime = (int)System.currentTimeMillis()/1000; 
+	        if (endTime-startTime > timeLimit-(endTime-pEndTime)-15)
 	            termination = true;
+	        pEndTime = endTime;
 	    }
 
 	    // Found a satisfactory solution
@@ -436,6 +478,8 @@ public class GA {
     protected int ell;                 // chromosome length
     protected int k;
     protected int round;
+    protected boolean firstRound;
+    protected int saveChromosomeNum;
     protected int nInitial;            // initial population size
     protected int nCurrent;            // current population size
     protected int nNextGeneration;     // population size for the next generation
@@ -448,12 +492,15 @@ public class GA {
     protected Chromosome []population;
     protected Chromosome []offspring;
     protected int []selectionIndex;
-    protected int maxGen;
+    protected int timeLimit;
     protected int maxFe;
     protected int repeat;
     protected int fe;
     protected int generation;
     protected int bestIndex;
+    protected int startTime;
+    protected int pEndTime;
+    
     
     Test.LTVertex[] arrVertices;
 }
