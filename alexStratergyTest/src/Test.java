@@ -66,19 +66,21 @@ public class Test {
 		int playerID;
 		Graph<LTVertex, LTEdge> g;
 		HashMap<Integer, LTVertex> vertices;
+		HashMap<LTVertex, Pair<Double>> ltHoldMap;
 		int round;
 		protected HashSet<Test.LTVertex> player1NewlyActiveVertices;
 	    protected HashSet<Test.LTVertex> player2NewlyActiveVertices; 
 	    protected HashSet<Test.LTVertex> player1ActiveVertices;
 	    protected HashSet<Test.LTVertex> player2ActiveVertices;
 	    
-		public SNA_FitnessFunction(int playerID, Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, int round, 
+		public SNA_FitnessFunction(int playerID, Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, HashMap<LTVertex, Pair<Double>> ltHoldMap, int round, 
 				HashSet<Test.LTVertex> player1NewlyActiveVertices, HashSet<Test.LTVertex> player2NewlyActiveVertices,
 				HashSet<Test.LTVertex> player1ActiveVertices, HashSet<Test.LTVertex> player2ActiveVertices)
 		{
 			this.playerID = playerID;
 			this.g = g;
 			this.vertices = vertices;
+			this.ltHoldMap = ltHoldMap;
 			this.round = round;
 			this.player1NewlyActiveVertices = player1NewlyActiveVertices;
 			this.player2NewlyActiveVertices = player2NewlyActiveVertices;
@@ -97,7 +99,7 @@ public class Test {
 			HashSet<Vertex> activatedVertices2= new HashSet<Vertex>();
 			
 			resetState(vertices, player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices);
-			resetHold(g, vertices);
+			resetHold(g, vertices, ltHoldMap);
 			for (int r = 0; r < round; r++)
 			{
 				seeds1.clear();
@@ -254,6 +256,8 @@ public class Test {
 		HashSet<LTVertex> player2ActiveVertices = new HashSet<LTVertex>();
 		HashSet<LTVertex> player1NewlyActiveVertices = new HashSet<LTVertex>();
 		HashSet<LTVertex> player2NewlyActiveVertices = new HashSet<LTVertex>();
+		HashSet<LTVertex> player1PreviousActiveVertices = new HashSet<LTVertex>();
+		HashSet<LTVertex> player2PreviousActiveVertices = new HashSet<LTVertex>();
 		int round = 10;
 		try 
 		{
@@ -276,6 +280,7 @@ public class Test {
 				if (!player2ActiveVertices.contains(v))
 					player1ActiveVertices.add(v);
 			}
+			
 			nodes = line[1].split(" ");
 			for (String node:nodes)
 			{
@@ -284,18 +289,21 @@ public class Test {
 					player2ActiveVertices.add(v);
 			}
 			nodes = line[2].split(" ");
+			player1PreviousActiveVertices.clear();
 			for (String node:nodes)
 			{
 				LTVertex v = vertices.get(Integer.parseInt(node));
 				player1ActiveVertices.add(v);
+				player1PreviousActiveVertices.add(v);
 			}
 			nodes = line[3].split(" ");
+			player2PreviousActiveVertices.clear();
 			for (String node:nodes)
 			{
 				LTVertex v = vertices.get(Integer.parseInt(node));
 				player2ActiveVertices.add(v);
+				player2PreviousActiveVertices.add(v);
 			}
-
 			try {
 				line[0] = input.readLine();
 				line[1] = input.readLine();
@@ -306,6 +314,13 @@ public class Test {
 				e.printStackTrace();
 			}
 		}
+		HashMap<LTVertex, Pair<Double>> ltHoldMap = null;
+		if (round != 10)
+			ltHoldMap = createLTHoldMap(vertices);
+		resetState(vertices, player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices);
+		resetHold(g, vertices, ltHoldMap);
+		updateLTHold(g, vertices, player1PreviousActiveVertices, player2PreviousActiveVertices);
+		ltHoldMap = createLTHoldMap(vertices);
 		try {
 			input.close();
 		} catch (IOException e) {
@@ -316,7 +331,7 @@ public class Test {
 		int N1 = 900, s1 = 2, maxG = 25;
 		double pc1 = 0.5625, pm1 = 0.12;
 		
-		return GA(1, g, vertices, player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices, k, round, N1, s1, pc1, pm1, timeLimit).get(0);
+		return GA(1, g, vertices, ltHoldMap, player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices, k, round, N1, s1, pc1, pm1, timeLimit).get(0);
 	}
 	
 	private static HashSet<LTVertex> stratergyForPlayer2(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, int k, InputFileCollect inputFile, int timeLimit)
@@ -383,6 +398,9 @@ public class Test {
 		nodes = line[0].split(" ");			//seeds player1 chose in this round
 		for (String node:nodes)
 			player1NewlyActiveVertices.add(vertices.get(Integer.parseInt(node)));
+		HashMap<LTVertex, Pair<Double>> ltHoldMap = null;
+		if (round != 10)
+			ltHoldMap = createLTHoldMap(vertices);
 		try {
 			input.close();
 		} catch (IOException e) {
@@ -393,8 +411,11 @@ public class Test {
 		int N1 = 900, s1 = 2, maxG = 25;
 		double pc1 = 0.5625, pm1 = 0.12;
 		
-		//in GA, we are always player 1
-		return GA(2, g, vertices, player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices, k, round, N1, s1, pc1, pm1, timeLimit).get(0);
+		HashSet<LTVertex> seeds = GA(2, g, vertices, ltHoldMap, player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices, k, round, N1, s1, pc1, pm1, timeLimit).get(0);
+		resetState(vertices, player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices);
+		resetHold(g, vertices, ltHoldMap);
+		updateLTHold(g, vertices, player1NewlyActiveVertices, seeds);
+		return seeds;
 	}
 	//public static PrintStream output = null;
 	private static void testStratergyForOnePartyGA()
@@ -413,7 +434,7 @@ public class Test {
 		
 		Graph<LTVertex, LTEdge> g;
 		HashMap<Integer, LTVertex> vertices;
-		ArrayList<HashSet<LTVertex>> seedsArray;
+		ArrayList<HashSet<LTVertex>> seedsArray = null;
 		HashSet<LTVertex> seeds = new HashSet<LTVertex>();
 		int k = 10;
 		int round = 10;
@@ -449,7 +470,7 @@ public class Test {
 			double pc1 = 0.5625, pm1 = 0.12;
 			
 			//maxG = 30000/N1;
-			seedsArray = GA(1, g, vertices, new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), k, round, N1, s1, pc1, pm1, maxG);
+			//seedsArray = GA(1, g, vertices, new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), k, round, N1, s1, pc1, pm1, maxG);
 			//seeds = SIMPATH(g, vertices, ita, ell, k);
 
 			HashSet<LTVertex> activeVertices = new HashSet<LTVertex>();
@@ -457,7 +478,7 @@ public class Test {
 			HashSet<Vertex> activatedVertices= new HashSet<Vertex>(activeVertices.size());
 			
 			resetState(vertices, new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>(), new HashSet<LTVertex>());
-			resetHold(g, vertices);
+			//resetHold(g, vertices);
 			for (int r = 0; r < round; r++)
 			{
 				seeds.clear();
@@ -513,9 +534,9 @@ public class Test {
 			
 			for (int r = 0; r < round; r++)
 			{
-				seeds = simpleGreedy(g, vertices, k, newerActiveVertices, activatedVertices);
+				//seeds = simpleGreedy(g, vertices, k, newerActiveVertices, activatedVertices);
 				resetState(vertices, newerActiveVertices.getFirst(), newerActiveVertices.getSecond(), activatedVertices, new HashSet<LTVertex>());
-				resetHold(g, vertices);
+				//resetHold(g, vertices);
 				activatedVertices.addAll(newerActiveVertices.getFirst());
 				seeds.addAll(newerActiveVertices.getFirst());
 				activeVertices.clear();
@@ -539,7 +560,7 @@ public class Test {
 		}
 	}
 	
-	private static ArrayList<HashSet<LTVertex>> GA(int playerID, Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, 
+	private static ArrayList<HashSet<LTVertex>> GA(int playerID, Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, HashMap<LTVertex, Pair<Double>> ltHoldMap,
 			HashSet<LTVertex> player1NewlyActiveVertices, HashSet<LTVertex> player2NewlyActiveVertices, 
 			HashSet<LTVertex> player1ActiveVertices, HashSet<LTVertex> player2ActiveVertices,
 			int k, int round, int N, int s, double pc, double pm, int timeLimit)
@@ -548,22 +569,28 @@ public class Test {
 		ArrayList<HashSet<LTVertex>> S = new ArrayList<HashSet<LTVertex>>(saveChromosomeNum+1);
 		for (int r = 0; r < saveChromosomeNum+1; r++)
 			S.add(new HashSet<LTVertex>(k));
-		SNA_FitnessFunction f = new SNA_FitnessFunction(playerID, g, vertices, 1,
+		SNA_FitnessFunction f = new SNA_FitnessFunction(playerID, g, vertices, ltHoldMap, 1,
 				player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices);
 		
 		GA ga = new GA(GA.SelectionModel.TOURNAMENT_SELECT, f, vertices.size(), N, s, pc, pm, timeLimit, -1, k, 1, vertices.values().toArray(new LTVertex[0]), saveChromosomeNum, round == 10);
-		ga.doIt(true);
+		ga.doIt(false);
 		ga.showStatistics();
+		
+		for (int i = 0; i < ga.nInitial; i++)
+			ga.selectionIndex[i] = i;
+		quickSort(ga.selectionIndex, ga.population, 0, ga.nInitial-1);
+		 
 		Chromosome pChromo = null;
 		int count = 0;
 		int countSaved = 0;
 		for (countSaved = 0; countSaved < saveChromosomeNum+1; countSaved++)
 		{
-			while (count < 1000 && pChromo != null && pChromo.gene.get(0).containsAll(ga.population[ga.selectionIndex[count]].gene.get(0)))
+			while (count < 1000 && pChromo != null && pChromo.gene.get(0).containsAll(ga.population[ga.selectionIndex[ga.nInitial-1-count]].gene.get(0)))
 				count++;
 			if (count == 1000)
 				break;
-			pChromo = ga.population[ga.selectionIndex[count++]];
+			pChromo = ga.population[ga.selectionIndex[ga.nInitial-1-count]];
+			count++;
 			for (Integer ind:pChromo.gene.get(0))
 			{
 				S.get(countSaved).add(pChromo.arrVertices[ind]);
@@ -586,7 +613,7 @@ public class Test {
 		return S;
 	}
 	
-	private static HashSet<LTVertex> simpleGreedy(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, int k, Pair<HashSet<LTVertex>> origNewerActiveVertices,
+	/*private static HashSet<LTVertex> simpleGreedy(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, int k, Pair<HashSet<LTVertex>> origNewerActiveVertices,
 			HashSet<LTVertex> origActivatedVertices)
 	{
 		HashSet<LTVertex> S = new HashSet<LTVertex>(k);
@@ -860,7 +887,7 @@ public class Test {
 			D.put(x, new HashSet<LTVertex>());
 		D.get(x).add(y);
 	}
-	
+	*/
 	private static Graph<LTVertex, LTEdge> createGraph(InputFileCollect inputFile, HashMap<Integer, LTVertex> vertices)
 	{
 		BufferedReader input = null;
@@ -966,24 +993,70 @@ public class Test {
 		}
 	}
 	
-	private static void resetHold(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices)
+	private static void resetHold(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, HashMap<LTVertex, Pair<Double>> ltHoldMap)
 	{
 		for (LTVertex v:vertices.values())
 		{
-			v.ltHold1 = 0;
-			v.ltHold2 = 0;
-			// something dangerous
-			/*
-			if (v.state == Vertex.State.INACTIVE)
-				for (LTVertex p:g.getPredecessors(v))
-				{
-					if (p.state == Vertex.State.PLAYER1_ACTIVE)
-						v.ltHold1 += g.findEdge(p, v).ltInfluence;
-					else if (p.state == Vertex.State.PLAYER2_ACTIVE)
-						v.ltHold2 += g.findEdge(p, v).ltInfluence;
-				}
-			*/
+			if (ltHoldMap != null)
+			{
+				v.ltHold1 = ltHoldMap.get(v).getFirst();
+				v.ltHold2 = ltHoldMap.get(v).getSecond();
+			}
+			else
+			{
+				v.ltHold1 = 0;
+				v.ltHold2 = 0;
+			}
 		}
+	}
+	
+	private static HashMap<LTVertex, Pair<Double>> createLTHoldMap(HashMap<Integer, LTVertex> vertices)
+	{
+		HashMap<LTVertex, Pair<Double>> holdMap = new HashMap<LTVertex, Pair<Double>>(vertices.size());
+		BufferedReader input = null;
+		String line = null;
+		String token[];
+		try 
+		{
+			input = new BufferedReader(new FileReader("GA_holdStatus.txt"));
+			line = input.readLine();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		while(line != null)
+		{
+			token = line.split(" ");
+			holdMap.put(vertices.get(Integer.parseInt(token[0])), new Pair<Double>(Double.parseDouble(token[1]), Double.parseDouble(token[2])));
+			try {
+				line = input.readLine();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return holdMap;
+	}
+	
+	private static void updateLTHold(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, 
+			HashSet<LTVertex> player1LastChoseVertices, HashSet<LTVertex> player2LastChoseVertices)
+	{
+		PrintStream output = null;
+		try {
+			output = new PrintStream(new File("GA_holdStatus.txt"));
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		HashSet<LTVertex> activeVertices1 = new HashSet<LTVertex>();
+		HashSet<LTVertex> activeVertices2 = new HashSet<LTVertex>();
+
+		runDiffusion(g, vertices, player1LastChoseVertices, player2LastChoseVertices, 0, activeVertices1, activeVertices2, Model.LTModel);
+		
+		for (LTVertex v:vertices.values())
+			output.println(v.vertexIndex+" "+v.ltHold1+" "+v.ltHold2);
+		output.close();
 	}
 	
 	private static LTVertex getVertex(int vertexIndex, HashMap<Integer, LTVertex> vertices, Model model)
@@ -1029,6 +1102,37 @@ public class Test {
 	}
 	 
 	private static void quickSort(int index[], double arr[], int left, int right) {
+	      int indexI = partition(index, arr, left, right);
+	      if (left < indexI - 1)
+	            quickSort(index, arr, left, indexI - 1);
+	      if (indexI < right)
+	            quickSort(index, arr, indexI, right);
+	}
+	
+	private static int partition(int index[], Chromosome arr[], int left, int right)
+	{
+	      int i = left, j = right;
+	      int tmp;
+	      Chromosome pivot = arr[index[(left + right) / 2]];
+	     
+	      while (i <= j) {
+	            while (arr[index[i]].getFitness() < pivot.getFitness())
+	                  i++;
+	            while (arr[index[j]].getFitness() > pivot.getFitness())
+	                  j--;
+	            if (i <= j) {
+	                  tmp = index[i];
+	                  index[i] = index[j];
+	                  index[j] = tmp;
+	                  i++;
+	                  j--;
+	            }
+	      };
+	     
+	      return i;
+	}
+	 
+	private static void quickSort(int index[], Chromosome arr[], int left, int right) {
 	      int indexI = partition(index, arr, left, right);
 	      if (left < indexI - 1)
 	            quickSort(index, arr, left, indexI - 1);

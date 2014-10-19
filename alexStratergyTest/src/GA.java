@@ -379,12 +379,11 @@ public class GA {
 	{
 		int i;
 
-	    
+		selection ();
 	    crossover ();
 	    mutation ();
 	    replacePopulation ();
-	    selection ();
-
+	    
 	    double max = -Double.MAX_VALUE;
 	    stFitness.reset ();
 	    for (i = 0; i < nCurrent; i++) {
@@ -411,7 +410,6 @@ public class GA {
 	{
 		generation = 0;
 		
-		selection ();
 	    while (!shouldTerminate ()) {
 	        oneRun (output);
 	    }
