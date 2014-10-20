@@ -1163,10 +1163,10 @@ public class Test {
 					for (LTEdge edge:edges)
 					{
 						successor = g.getDest(edge);
-						if (successor.state == Vertex.State.INACTIVE)
+						if ((successor.state == Vertex.State.PLAYER1_NEWLY_ACTIVE || successor.state == Vertex.State.INACTIVE) && !newlyActiveVertices2.contains(successor))
 						{
 							((LTVertex)successor).ltHold1 += ((LTEdge)edge).ltInfluence;
-							if (((LTVertex)successor).ltHold1 > ((LTVertex)successor).ltThreshold)
+							if (((LTVertex)successor).ltHold1 >= ((LTVertex)successor).ltThreshold)
 							{
 								successor.state = Vertex.State.PLAYER1_NEWLY_ACTIVE;
 								newerActiveVertices1.add(successor);
@@ -1185,10 +1185,10 @@ public class Test {
 					for (LTEdge edge:edges)
 					{
 						successor = g.getDest(edge);
-						if (successor.state == Vertex.State.INACTIVE)
+						if (successor.state == Vertex.State.PLAYER2_NEWLY_ACTIVE || successor.state == Vertex.State.INACTIVE)
 						{
 							((LTVertex)successor).ltHold2 += ((LTEdge)edge).ltInfluence;
-							if (((LTVertex)successor).ltHold2 > ((LTVertex)successor).ltThreshold)
+							if (((LTVertex)successor).ltHold2 >= ((LTVertex)successor).ltThreshold)
 							{
 								successor.state = Vertex.State.PLAYER2_NEWLY_ACTIVE;
 								newerActiveVertices2.add(successor);
@@ -1197,7 +1197,8 @@ public class Test {
 						else if (successor.state == Vertex.State.PLAYER1_NEWLY_ACTIVE)
 						{
 							((LTVertex)successor).ltHold2 += ((LTEdge)edge).ltInfluence;
-							if (((LTVertex)successor).ltHold2 >= ((LTVertex)successor).ltHold1)
+							if (((LTVertex)successor).ltHold2 >= ((LTVertex)successor).ltHold1 
+									&& ((LTVertex)successor).ltHold2 >= ((LTVertex)successor).ltThreshold)
 							{
 								successor.state = Vertex.State.PLAYER2_NEWLY_ACTIVE;
 								newerActiveVertices2.add(successor);
