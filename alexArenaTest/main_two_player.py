@@ -100,27 +100,21 @@ if __name__ == '__main__':
 
 
         ## Player 2: your strategy ##
-        copy_graph = model.get_copy_graph()
-        selected_nodes_list = s1.run(copy_graph, nodes_num_per_iter)
-        selected_nodes_list = model.select_nodes(selected_nodes_list, player_id = 1)
-        # print('Player 2 is selecting nodes ...',end='', file=sys.stderr)
-        # try:
-            # sp.call(['make','strategy%d' % (p2_strategy_id), 
-                # 'PLAYER_ID=2',
-                # 'NODES_FILE=' + nodes_file, 
-                # 'EDGES_FILE=' + edges_file, 
-                # 'STATUS_FILE=' + status_file, 
-                # 'SELECTED_NODES_FILE=' + selected_nodes_file, 
-                # 'NODES_NUM_PER_ITER=' + str(nodes_num_per_iter),
-                # 'TIME_LIMIT_IN_SEC=' + str(time_limit_this_round),
-                # ], timeout=time_limit_this_round)
-        # except sp.TimeoutExpired:
-            # print(' TimeLimitedExceed ... ', end='', file=sys.stderr)
-        # except:
-            # print(' RunTimeError ... ', end='', file=sys.stderr)
-        
-        # selected_nodes_list = read_nodes_from_file(selected_nodes_file)
+        # copy_graph = model.get_copy_graph()
+        # selected_nodes_list = s1.run(copy_graph, nodes_num_per_iter)
         # selected_nodes_list = model.select_nodes(selected_nodes_list, player_id = 1)
+        print('Player 2 is selecting nodes ...',end='', file=sys.stderr)
+        try:
+            sp.call(['java','-jar','SNA_HW1.jar','2',nodes_file,edges_file,status_file,
+			str(nodes_num_per_iter),selected_nodes_file,str(time_limit_this_round)],
+			timeout=time_limit_this_round)
+        except sp.TimeoutExpired:
+            print(' TimeLimitedExceed ... ', end='', file=sys.stderr)
+        except:
+            print(' RunTimeError ... ', end='', file=sys.stderr)
+        
+        selected_nodes_list = read_nodes_from_file(selected_nodes_file)
+        selected_nodes_list = model.select_nodes(selected_nodes_list, player_id = 1)
 
         # Output the selected nodes of player 2
         update_status_file(status_file, selected_nodes_list)

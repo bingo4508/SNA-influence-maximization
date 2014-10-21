@@ -337,19 +337,19 @@ public class Test {
 		}
 		HashMap<LTVertex, Pair<Double>> ltHoldMap = null;
 		if (round != 10)
-			ltHoldMap = createLTHoldMap(vertices);
+			ltHoldMap = createLTHoldMap(1, vertices);
 		player1ActiveVertices.removeAll(player1PreviousActivatedVertices);
 		player1ActiveVertices.removeAll(player1PreviousActiveVertices);
 		player2ActiveVertices.removeAll(player2PreviousActivatedVertices);
 		player2ActiveVertices.removeAll(player2PreviousActiveVertices);
 		resetState(vertices, player1PreviousActiveVertices, player2PreviousActiveVertices, player1ActiveVertices, player2ActiveVertices);
 		resetHold(g, vertices, ltHoldMap);
-		updateLTHold(g, vertices, player1PreviousActiveVertices, player2PreviousActiveVertices);
+		updateLTHold(1, g, vertices, player1PreviousActiveVertices, player2PreviousActiveVertices);
 		player1ActiveVertices.addAll(player1PreviousActivatedVertices);
 		player1ActiveVertices.addAll(player1PreviousActiveVertices);
 		player2ActiveVertices.addAll(player2PreviousActivatedVertices);
 		player2ActiveVertices.addAll(player2PreviousActiveVertices);
-		ltHoldMap = createLTHoldMap(vertices);
+		ltHoldMap = createLTHoldMap(1, vertices);
 		try {
 			input.close();
 		} catch (IOException e) {
@@ -441,7 +441,7 @@ public class Test {
 			player1NewlyActiveVertices.add(vertices.get(Integer.parseInt(node)));
 		HashMap<LTVertex, Pair<Double>> ltHoldMap = null;
 		if (round != 10)
-			ltHoldMap = createLTHoldMap(vertices);
+			ltHoldMap = createLTHoldMap(2, vertices);
 		try {
 			input.close();
 		} catch (IOException e) {
@@ -455,7 +455,7 @@ public class Test {
 		HashSet<LTVertex> seeds = GA(2, g, vertices, ltHoldMap, player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices, k, round, N1, s1, pc1, pm1, timeLimit).get(0);
 		resetState(vertices, player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices);
 		resetHold(g, vertices, ltHoldMap);
-		updateLTHold(g, vertices, player1NewlyActiveVertices, seeds);
+		updateLTHold(2, g, vertices, player1NewlyActiveVertices, seeds);
 		return seeds;
 	}
 	//public static PrintStream output = null;
@@ -639,7 +639,7 @@ public class Test {
 		}
 		PrintStream output = null;
 		try {
-			output = new PrintStream(new File("GA_preSelectedGene.txt"));
+			output = new PrintStream(new File("GA_preSelectedGene_player"+playerID+".txt"));
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -1051,7 +1051,7 @@ public class Test {
 		}
 	}
 	
-	private static HashMap<LTVertex, Pair<Double>> createLTHoldMap(HashMap<Integer, LTVertex> vertices)
+	private static HashMap<LTVertex, Pair<Double>> createLTHoldMap(int playerID, HashMap<Integer, LTVertex> vertices)
 	{
 		HashMap<LTVertex, Pair<Double>> holdMap = new HashMap<LTVertex, Pair<Double>>(vertices.size());
 		BufferedReader input = null;
@@ -1059,7 +1059,7 @@ public class Test {
 		String token[];
 		try 
 		{
-			input = new BufferedReader(new FileReader("GA_holdStatus.txt"));
+			input = new BufferedReader(new FileReader("GA_holdStatus_player"+playerID+".txt"));
 			line = input.readLine();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -1085,12 +1085,12 @@ public class Test {
 		return holdMap;
 	}
 	
-	private static void updateLTHold(Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, 
+	private static void updateLTHold(int playerID, Graph<LTVertex, LTEdge> g, HashMap<Integer, LTVertex> vertices, 
 			HashSet<LTVertex> player1LastChoseVertices, HashSet<LTVertex> player2LastChoseVertices)
 	{
 		PrintStream output = null;
 		try {
-			output = new PrintStream(new File("GA_holdStatus.txt"));
+			output = new PrintStream(new File("GA_holdStatus_player"+playerID+".txt"));
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
