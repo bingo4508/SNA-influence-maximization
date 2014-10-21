@@ -256,8 +256,10 @@ public class Test {
 		HashSet<LTVertex> player2ActiveVertices = new HashSet<LTVertex>();
 		HashSet<LTVertex> player1NewlyActiveVertices = new HashSet<LTVertex>();
 		HashSet<LTVertex> player2NewlyActiveVertices = new HashSet<LTVertex>();
-		HashSet<LTVertex> player1PreviousActiveVertices = new HashSet<LTVertex>();
+		HashSet<LTVertex> player1PreviousActiveVertices = new HashSet<LTVertex>();	//actually, previous seeds
 		HashSet<LTVertex> player2PreviousActiveVertices = new HashSet<LTVertex>();
+		HashSet<LTVertex> player1PreviousActivatedVertices = new HashSet<LTVertex>();
+		HashSet<LTVertex> player2PreviousActivatedVertices = new HashSet<LTVertex>();
 		int round = 10;
 		try 
 		{
@@ -274,35 +276,54 @@ public class Test {
 		{
 			round--;
 			nodes = line[0].split(" ");
-			for (String node:nodes)
-			{
-				LTVertex v = vertices.get(Integer.parseInt(node));
-				if (!player2ActiveVertices.contains(v))
-					player1ActiveVertices.add(v);
-			}
-			
-			nodes = line[1].split(" ");
-			for (String node:nodes)
-			{
-				LTVertex v = vertices.get(Integer.parseInt(node));
-				if (!player1ActiveVertices.contains(v))
-					player2ActiveVertices.add(v);
-			}
-			nodes = line[2].split(" ");
 			player1PreviousActiveVertices.clear();
 			for (String node:nodes)
 			{
-				LTVertex v = vertices.get(Integer.parseInt(node));
-				player1ActiveVertices.add(v);
-				player1PreviousActiveVertices.add(v);
+				if (!node.equals(""))
+				{
+					LTVertex v = vertices.get(Integer.parseInt(node));
+					if (!player2ActiveVertices.contains(v))
+					{
+						player1ActiveVertices.add(v);
+						player1PreviousActiveVertices.add(v);
+					}
+				}
 			}
-			nodes = line[3].split(" ");
+			nodes = line[1].split(" ");
 			player2PreviousActiveVertices.clear();
 			for (String node:nodes)
 			{
-				LTVertex v = vertices.get(Integer.parseInt(node));
-				player2ActiveVertices.add(v);
-				player2PreviousActiveVertices.add(v);
+				if (!node.equals(""))
+				{
+					LTVertex v = vertices.get(Integer.parseInt(node));
+					if (!player1ActiveVertices.contains(v))
+					{
+						player2ActiveVertices.add(v);
+						player2PreviousActiveVertices.add(v);
+					}
+				}
+			}
+			nodes = line[2].split(" ");
+			player1PreviousActivatedVertices.clear();
+			for (String node:nodes)
+			{
+				if (!node.equals(""))
+				{
+					LTVertex v = vertices.get(Integer.parseInt(node));
+					player1ActiveVertices.add(v);
+					player1PreviousActivatedVertices.add(v);
+				}
+			}
+			nodes = line[3].split(" ");
+			player2PreviousActivatedVertices.clear();
+			for (String node:nodes)
+			{
+				if (!node.equals(""))
+				{
+					LTVertex v = vertices.get(Integer.parseInt(node));
+					player2ActiveVertices.add(v);
+					player2PreviousActivatedVertices.add(v);
+				}
 			}
 			try {
 				line[0] = input.readLine();
@@ -317,9 +338,17 @@ public class Test {
 		HashMap<LTVertex, Pair<Double>> ltHoldMap = null;
 		if (round != 10)
 			ltHoldMap = createLTHoldMap(vertices);
-		resetState(vertices, player1NewlyActiveVertices, player2NewlyActiveVertices, player1ActiveVertices, player2ActiveVertices);
+		player1ActiveVertices.removeAll(player1PreviousActivatedVertices);
+		player1ActiveVertices.removeAll(player1PreviousActiveVertices);
+		player2ActiveVertices.removeAll(player2PreviousActivatedVertices);
+		player2ActiveVertices.removeAll(player2PreviousActiveVertices);
+		resetState(vertices, player1PreviousActiveVertices, player2PreviousActiveVertices, player1ActiveVertices, player2ActiveVertices);
 		resetHold(g, vertices, ltHoldMap);
 		updateLTHold(g, vertices, player1PreviousActiveVertices, player2PreviousActiveVertices);
+		player1ActiveVertices.addAll(player1PreviousActivatedVertices);
+		player1ActiveVertices.addAll(player1PreviousActiveVertices);
+		player2ActiveVertices.addAll(player2PreviousActivatedVertices);
+		player2ActiveVertices.addAll(player2PreviousActiveVertices);
 		ltHoldMap = createLTHoldMap(vertices);
 		try {
 			input.close();
@@ -361,28 +390,40 @@ public class Test {
 			nodes = line[0].split(" ");
 			for (String node:nodes)
 			{
-				LTVertex v = vertices.get(Integer.parseInt(node));
-				if (!player2ActiveVertices.contains(v))
-					player1ActiveVertices.add(v);
+				if (!node.equals(""))
+				{
+					LTVertex v = vertices.get(Integer.parseInt(node));
+					if (!player2ActiveVertices.contains(v))
+						player1ActiveVertices.add(v);
+				}
 			}
 			nodes = line[1].split(" ");
 			for (String node:nodes)
 			{
-				LTVertex v = vertices.get(Integer.parseInt(node));
-				if (!player1ActiveVertices.contains(v))
-					player2ActiveVertices.add(v);
+				if (!node.equals(""))
+				{
+					LTVertex v = vertices.get(Integer.parseInt(node));
+					if (!player1ActiveVertices.contains(v))
+						player2ActiveVertices.add(v);
+				}
 			}
 			nodes = line[2].split(" ");
 			for (String node:nodes)
 			{
-				LTVertex v = vertices.get(Integer.parseInt(node));
-				player1ActiveVertices.add(v);
+				if (!node.equals(""))
+				{
+					LTVertex v = vertices.get(Integer.parseInt(node));
+					player1ActiveVertices.add(v);
+				}
 			}
 			nodes = line[3].split(" ");
 			for (String node:nodes)
 			{
-				LTVertex v = vertices.get(Integer.parseInt(node));
-				player2ActiveVertices.add(v);
+				if (!node.equals(""))
+				{
+					LTVertex v = vertices.get(Integer.parseInt(node));
+					player2ActiveVertices.add(v);
+				}
 			}
 
 			try {
@@ -1034,6 +1075,12 @@ public class Test {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+		}
+		try {
+			input.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 		return holdMap;
 	}
