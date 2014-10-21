@@ -1,0 +1,5 @@
+*.pyc
+__pycache__/
+.idea/
+game_status.txt
+selected_nodes.txt
