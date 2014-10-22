@@ -25,7 +25,10 @@ def method(m, num_of_nodes):
     q_table = []    # (margin, node, iter)
     iteration = 1
     for n in m.G.nodes():
-        margin = -1*calculate_spread(m, [n])
+        if m.G.node[n]['status'] == 'inactivated':
+            margin = -1*calculate_spread(m, [n])
+        else:
+            margin = 0
         hq.heappush(q_table, (margin, n, 1))
 
     while iteration <= num_of_nodes:
@@ -46,6 +49,7 @@ def run():
 
     ns = method(m, nodes_num_per_iter)
 
+    print("Choose: ",ns)
     # Write output
     write_nodes_list(ns, selected_nodes_file)
 

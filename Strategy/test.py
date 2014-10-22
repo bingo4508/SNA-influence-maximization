@@ -10,8 +10,8 @@ import max_outdegree_strategy as mos
 import Strategy.lazy_greedy as lg
 import Strategy.centrality as c
 
-# m = LTModel('../networks/egofb_lt_nodes.txt', '../networks/egofb_lt_edges.txt', 'status.txt', 2, 1)
-m = LTModel('../networks/hepth_lt_nodes.txt', '../networks/hepth_lt_edges.txt', 'status.txt', 2, 1)
+m = LTModel('../networks/egofb_lt_nodes.txt', '../networks/egofb_lt_edges.txt', 'status.txt', 2, 1)
+# m = LTModel('../networks/hepth_lt_nodes.txt', '../networks/hepth_lt_edges.txt', 'status.txt', 2, 1)
 
 
 PICK_NODE = 10
@@ -43,6 +43,7 @@ for i in range(ITERATION):
     # g = m.G.reverse(copy=True)
     # ns = c.method(m, g, PICK_NODE)
 
+    print(ns)
     ##################################################################
     print("Time: %f secs" % (time.clock()-t_start))
     # Propagation...

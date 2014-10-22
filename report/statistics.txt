@@ -1,0 +1,89 @@
+=============================
+Strategy: Max weight
+Player: 1
+
+701
+750
+1023
+1094
+1140
+1265
+1326
+1419
+1537
+1646
+=============================
+Strategy: Max out degree
+Player: 1
+
+662
+833
+912
+986
+1079
+1095
+1133
+1202
+1340
+1412
+=============================
+Strategy: Page rank
+Player: 1
+Notes: Run only once, not weighted, alpha=0.9
+
+711
+879
+1055
+1078
+1124
+1137
+1232
+1334
+1329
+1410
+=============================
+Strategy: Page rank
+Player: 1
+Notes: Run only once, weighted, alpha=0.9
+
+719
+944
+1067
+1112
+1121
+1155
+1200
+1369
+1408
+1444
+=============================
+Strategy: Page rank
+Player: 1
+Notes: Run every iteration, not weighted, alpha=0.9
+
+711
+984
+1075
+1156
+1218
+1332
+1381
+1491
+1599
+1708
+=============================
+Strategy: Page rank
+Player: 1
+Notes: Run every iteration, weighted, alpha=0.9
+
+719
+1020
+1134
+1265
+1370
+1432
+1548
+1650
+1709
+1765
+=============================
