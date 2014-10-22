@@ -8,13 +8,13 @@ public class MyRand {
 	{
 		Random rand = new Random();
 		int N = 624;
-		byte init_key[] = new byte[N*Long.BYTES];
+		byte init_key[] = new byte[N*Long.SIZE/8];
 		long temp;
 
 	    for (int i = 0; i < N; i++)
 	    {
 	    	temp = (long) rand.nextLong() * rand.nextInt();
-	    	for (int j = 0; j < Long.BYTES; j++)
+	    	for (int j = 0; j < Long.SIZE/8; j++)
 	    		init_key[4*i+j] = ByteBuffer.allocate(8).putLong(temp).array()[j];
 	    }
 
