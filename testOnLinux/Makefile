@@ -9,16 +9,16 @@ SELECTED_NODES_FILE=selected_nodes.txt
 TIME_LIMIT_IN_SEC=60.0
 
 strategy1:
-	javac -cp ./jung/* *.java
-	java -cp .:./jung/* Test $(PLAYER_ID) $(NODES_FILE) $(EDGES_FILE) $(STATUS_FILE) $(NODES_NUM_PER_ITER) $(SELECTED_NODES_FILE) $(TIME_LIMIT_IN_SEC)
+	javac -cp "./jung/*" *.java
+	java -cp ".:./jung/*" Test $(PLAYER_ID) $(NODES_FILE) $(EDGES_FILE) $(STATUS_FILE) $(NODES_NUM_PER_ITER) $(SELECTED_NODES_FILE) $(TIME_LIMIT_IN_SEC)
 
 strategy2:
-	javac -cp ./jung/* *.java
-	java -cp .:./jung/* Test $(PLAYER_ID) $(NODES_FILE) $(EDGES_FILE) $(STATUS_FILE) $(NODES_NUM_PER_ITER) $(SELECTED_NODES_FILE) $(TIME_LIMIT_IN_SEC)
+	javac -cp "./jung/*" *.java
+	java -cp ".:./jung/*" Test $(PLAYER_ID) $(NODES_FILE) $(EDGES_FILE) $(STATUS_FILE) $(NODES_NUM_PER_ITER) $(SELECTED_NODES_FILE) $(TIME_LIMIT_IN_SEC)
 
 strategy3:
-	javac -cp ./jung/* *.java
-	java -cp .:./jung/* Test $(PLAYER_ID) $(NODES_FILE) $(EDGES_FILE) $(STATUS_FILE) $(NODES_NUM_PER_ITER) $(SELECTED_NODES_FILE) $(TIME_LIMIT_IN_SEC)
+	javac -cp "./jung/*" *.java
+	java -cp ".:./jung/*" Test $(PLAYER_ID) $(NODES_FILE) $(EDGES_FILE) $(STATUS_FILE) $(NODES_NUM_PER_ITER) $(SELECTED_NODES_FILE) $(TIME_LIMIT_IN_SEC)
 
 clean:
 	rm game_status.txt

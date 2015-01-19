@@ -104,14 +104,14 @@ if __name__ == '__main__':
         # selected_nodes_list = s1.run(copy_graph, nodes_num_per_iter)
         # selected_nodes_list = model.select_nodes(selected_nodes_list, player_id = 1)
         print('Player 2 is selecting nodes ...',end='', file=sys.stderr)
-        try:
-            sp.call(['java','-jar','SNA_HW1.jar','2',nodes_file,edges_file,status_file,
-			str(nodes_num_per_iter),selected_nodes_file,str(time_limit_this_round)],
-			timeout=time_limit_this_round)
-        except sp.TimeoutExpired:
-            print(' TimeLimitedExceed ... ', end='', file=sys.stderr)
-        except:
-            print(' RunTimeError ... ', end='', file=sys.stderr)
+        # try:
+            # sp.call(['java','-jar','SNA_HW1.jar','2',nodes_file,edges_file,status_file,
+			# str(nodes_num_per_iter),selected_nodes_file,str(time_limit_this_round)],
+			# timeout=time_limit_this_round)
+        # except sp.TimeoutExpired:
+            # print(' TimeLimitedExceed ... ', end='', file=sys.stderr)
+        # except:
+            # print(' RunTimeError ... ', end='', file=sys.stderr)
         
         selected_nodes_list = read_nodes_from_file(selected_nodes_file)
         selected_nodes_list = model.select_nodes(selected_nodes_list, player_id = 1)
